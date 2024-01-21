@@ -1,4 +1,4 @@
-\documentclass[]{article}
+\documentclass[11pt]{article}
 \usepackage{amsmath}
 \usepackage{amsfonts} 
 \usepackage[english]{babel}
@@ -12,9 +12,9 @@
 \usepackage{url} 
 \urlstyle{same} % fix wacky url links in bib entries. 
 % \usepackage{minted}
-\usepackage{lineno}
-\renewcommand{\linenumberfont}{\tiny\color{gray}}
-\linenumbers
+\usepackage[switch, displaymath, mathlines]{lineno}
+
+
 
 % Basic Type Settings ----------------------------------------------------------
 \usepackage[margin=1in,footskip=0.25in]{geometry}
@@ -81,6 +81,9 @@
 \author{Hongda Li, Yining Zhou, Xiaoping Shi}
 
 \begin{document}
+\internallinenumbers
+
+
 \maketitle
 
 \begin{abstract}
@@ -91,16 +94,19 @@
 \section{Introduction}
     We describe an optimization problem introduce by Prof Shi and his student Yining. 
     To start we define the following quantities for the optimization problem. 
-    \begin{enumerate}
+    \begin{itemize}
         \item [1.] $n\in \mathbb N$. It denotes the numer of states for a Markov Chain. 
         \item [2.] $p\in \mathbb R^{n\times n}$ denotes the probability transition matrix. It's in small case because it's also the variable for the optimization problem. It supports 2 types of indexing, $p_{ij}$ for $i, j \in \{1, \cdots, n\}$, or $p_j$ with $j\in \{1, \cdots, n^2\}$. More on this later. 
         \item [3.] $\eta_{ij} \ge 0$ for $i, j \in \{1, \cdots, n\}$ is a parameter of the problem. 
         \item [4.] $\hat p$ is the empirically measured probability transition matrix. They are the maximal likelihood estimators for the transition probability in the transition probability matrix. 
         \item [5.] $\lambda$ is the regularization parameter. 
-        \item [6.] $\mathbf C^m_n$ is the combinatoric term that counts all possible subset of size $n<m$ from a super set of size $m$. 
-    \end{enumerate}
+        \item [6.] $\mathbf C^m_n$ is the combinatoric term that counts all possible subset of size $n, n<m$ from a super set of size $m$. 
+    \end{itemize}
+    \par
+\begin{linenumbers}
     When $p$ is referred to as a vector we may say $p \in \mathbb R^{n^2}$, if it's referred to as the matrix, we will use $p \in \mathbb R^{n\times n}$. 
     When indexing $p$ using a tuple, or a single number, it's possible to translate between the two type of indexing scheme using the following bijective map: 
+\end{linenumbers}
     \begin{align*}
         & (i, j) \mapsto k:= i \times n + j
         \\
@@ -111,7 +117,9 @@
     We emphasize, in different programming languages and development environments, the convention of indexing a muti-array using different kind of tuples can be very different. 
     For now we use the aboe indexing, which is a row major index convention (Like Python). 
     \subsection{The Optimization Problem}
+    \begin{linenumbers}
         The optimization problem is posed as 
+    \end{linenumbers}
         \begin{align}
             &\underset{p \in \mathbb R^{n^2}}{\text{argmin}} 
             \left\lbrace
@@ -143,10 +151,12 @@
         It's defined as $\Delta_n = \{x\in \mathbb R^n_+ : \sum_{i =1}^{n}x_n = 1\}$. 
         For simplicity we just denote using notation $\Delta_{n\times n} = \Delta_n\oplus\Delta_n\oplus \cdots \oplus \Delta_n$. 
         
+        
 
 \section{Modeling}
-    The nont-smooth part with the absolute value requires some amount of creativity if we were to use common optimization algorithms. 
-    \subsection*{Representation of the Non-smooth Part}
+    
+    The non-smooth part with the absolute value requires some amount of creativity if we were to use common optimization algorithms. 
+    \subsection{Representation of the Non-smooth Part}
         \begin{claim}
             The nonsmooth objective can be model as 
             \begin{align*}
@@ -166,7 +176,9 @@
             Suppose that $i\in \{1,\cdots,\mathbf C^{n^2}_2\}$ denoting the index for a specific row of matrix $C$ denotes the index of a specific row, and $j\in \{1, \cdots, n^2\}$ denotes a specific column of matrix $C$. 
             Mathematically describing the matrix is difficult, but it can be algorithmically defined.
             A sparse matrix format can be described by as a mapping from $(i,j)$, the set of all indices to the element in the vector. 
-            The following \hyperref[alg:matrix_make]{algorithm \ref*{alg:matrix_make}} construct such a mapping. 
+            The following 
+            \hyperref[alg:matrixmk]{algorithm \ref{alg:matrixmk}}
+            construct such a mapping. 
             \begin{algorithm}[H]
                 \begin{algorithmic}[1]
                 \STATE{Let $C$ be a $\mathbf C_2^{n^2}$ by $n^2$ zero matrix. }
@@ -178,24 +190,28 @@
                             }
                         \ENDIF
                         \STATE{
-                            $C[in^2 + j, i] := \lambda/|\hat p_{i} - \hat p_{j}|$
+                            $C[i\times n^2 + j, i] := \lambda/|\hat p_{i} - \hat p_{j}|$
                             } 
                         \STATE{
-                            $C[in^2 + j, j]:= -\lambda/|\hat p_{i} - \hat p_{j}|$ 
+                            $C[i\times n^2 + j, j]:= -\lambda/|\hat p_{i} - \hat p_{j}|$ 
                         }
                     \ENDFOR
                 \ENDFOR
-                \end{algorithmic}\caption{Matrix Make Algorithm}
-                \label{alg:matrix_make}
+                \end{algorithmic}
+                \caption{Matrix Make Algorithm}
+                \label{alg:matrixmk}
             \end{algorithm}
+            
         \end{claim}
         \begin{remark}
             In practice, we should use sparse matrix data format such as SCR, SCC in programming languages. 
         \end{remark}
     \subsection{Modeling it for Sequential Quadratic Programming}
+    \begin{linenumbers}
         To use sequential programming, we model the non-smooth $\Vert Cp\Vert_1$ parts of the objective function as a linear constraints. 
-        Define $u\in \mathbb R^{\mathbf C^{n^2}_2}_+$ then the below problem is equivalent to the original formulation: 
-        \begin{align*}
+        Define $u\in \mathbb R^{\mathbf C^{n^2}_2}_+$ then the below problem is equivalent to the original formulation:
+    \end{linenumbers}
+        \begin{align}
             &\underset{
                 \substack{
                         p, u
@@ -218,7 +234,7 @@
                 u \in \mathbb R^{\mathbf C^{n^2}_2}_+
             \end{aligned}
             \right\rbrace
-        \end{align*}
+        \end{align}
         This is a Non-linear programming problem and it has a convex objective. 
         Common NLP packages in programming languages can solve this efficiently. 
         However it's potentially possible that these solvers are not adapated to huge sparse matrix $C$ that has special structure to it. 
@@ -230,14 +246,24 @@
         And $\text{ri.dom}(f)\cap \text{ri.dom}(g) \neq \emptyset$. 
         Recall that proximal operator of function $f$ is the resolvent operator on the subgradient $(I + \partial f)^{-1}$. 
         Subgradient is just a generalize type of gradient that can handle continuous function that is not necessarily differentiable. 
-        To model the original formulation in such a form, we need to introduce a lot of quantities. 
+        To model the original formulation in such a form, we introduce these quantities: 
         \begin{itemize}
-            \item 
+            \item [1.] $f_1(x_1): \mathbb R^{n^2}\mapsto \mathbb R := \sum_{i = 1}^{n^2}-\eta_{i, j}(p_{i, j})$
+            \item [2.] $f_2(x_2): \mathbb R^{\mathbf C^{n^2}_2}\mapsto \mathbb R := \Vert x_2\Vert_1$. 
+            \item [3.] $f_3(x_3)= \mathbb R^{n^2}\mapsto \mathbb {\bar R}:= \delta_{\Delta_{n\times n}}(x_3)$
         \end{itemize}
+        The above 3 functions models the three parts of the objective function. 
+        Let $f(x_1, x_2, x_3):= f_1(x_1) + f_2(x_2) + f_3(x_3)$. 
+        However, they share different variables $x_1, x_2, x_3$, from different dimension. 
+        We want $g$ to represents the constraints that $x_2 = Cp$, and $x_1 = x_3 = p$. 
+        Simplifying: $x_2 = C x_1, x_1 = x_3$. 
+        This is a linear system of the form
+        
+
 
 \appendix
 
-\bibliographystyle{IEEETran}
+\bibliographystyle{IEEEtran}
 \bibliography{refs.bib}
 
 
