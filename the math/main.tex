@@ -116,6 +116,9 @@
     \end{align*}
     We emphasize, in different programming languages and development environments, the convention of indexing a muti-array using different kind of tuples can be very different. 
     For now we use the aboe indexing, which is a row major index convention (Like Python). 
+    \subsection{Some Mathematical Entities}
+        We introduce some mathematical entities for more context. 
+
     \subsection{The Optimization Problem}
     \begin{linenumbers}
         The optimization problem is posed as 
@@ -156,7 +159,7 @@
 \section{Modeling}
     
     The non-smooth part with the absolute value requires some amount of creativity if we were to use common optimization algorithms. 
-    \subsection{Representation of the Non-smooth Part}
+    \subsection{Representation of the Non-smooth Part}\label{sec:opsplit_model}
         \begin{claim}
             The nonsmooth objective can be model as 
             \begin{align*}
@@ -276,7 +279,71 @@
         The matrix $A$ is a $(\mathbf C^{n^2}_2 + n^2) \times (3n^2)$ matrix. 
         It's still a sparse matrix. 
         Conviently, if we use $\otimes$ then the above matrix admit kronecker product representation: 
+    \subsection*{A Quick Tour into Operator Splitting Method}
+        Operator splitting method is relatively new and doesn't have a mature toolings in software. 
+        We describe the algorithm in this section to provide context in the up comming part that discuss the implementations details. 
 \subsection{Implementation, Software, and Toolings}
+    The software for Squential Quadratic programming is relatively mature. 
+    Whether they support sparse matrix inversion depends on the developers. 
+    The software operator splitting method is less common.
+
+    To use Operator splitting method such as Douglas Rachford (Equivalently the ADMM via a the Dual), Peachman Rachford, it's required to compute the proximal operator of functions. 
+    The following theorem is relevant to efficiently compute the proximal mapping for our model. 
+    \begin{theorem}[Separable Proximal Theorem]
+        Suppose that function $f(x)$ can be written as the Euclidean cross product $(f_1(x_1), f_2(x_2), \cdots, f_m(x_m))$, and we assume that each of $x_1, x_2, \cdots, x_n$ are vector in $\mathbb R^{k_1}, \mathbb R^{k_2}, \cdots, \mathbb R^{k_m}$ such that $x =\bigoplus{i=1}^m x_i$,then we can write the proximal gradient operator of $f$ in parallel form which is given as: 
+        $$
+        \begin{aligned}
+            \text{prox}_{f, \lambda}((x_1, x_2, \cdots, x_m)) = 
+            (\text{prox}_{f_1, \lambda}(x_1), \text{prox}_{f_2, \lambda}(x_2), \cdots \text{prox}_{f_m, \lambda}(x_m)).
+        \end{aligned}
+        $$
+        In general, if there exists any permutation of the list of $x_1, x_2, \cdots, x_m$, the parallelization property of prox will be come applicable. 
+    \end{theorem}
+    \begin{linenumbers}
+        Recall objective $f(x_1, x_2, x_3) = f_1(x_1) + f_2(x_2) + f_3(x_3)$ from section \ref*{sec:opsplit_model}. It has the applicable form and hence we have:     
+    \end{linenumbers}
+    \[
+        \underset{\lambda f}{\text{prox}}((x_1, x_2, x_3))
+        = 
+        \underset{\lambda f_1}{\text{prox}}(x_1) \oplus
+        \underset{\lambda f_2}{\text{prox}}(x_2) \oplus
+        \underset{\lambda f_3}{\text{prox}}(x_3). 
+    \]
+    \begin{linenumbers}
+        Next, we proceed to write each $f_i$ for $i = 1, 2, 3$ into separable sum as well. 
+        $f_1, f_2$ are trivial to do however $\delta_{\Delta_{n\times n}}$ requires some thought. 
+        Consider $x_3 = \bigoplus_{i = 1}^n x_{3, i}$, so that the vector is the direct product, then     
+    \end{linenumbers}
+    \[
+        \delta_{\Delta_{n\times n}}(x_3) = 
+        \sum_{i = 1}^{n} \delta_{\Delta_n}(x_{3, i}). 
+    \]
+    The indictor function $\delta_{\Delta_{n\times n}}$ acts on groups of $n$ elements in the vector $x_3$ individually and separately, hence it admits the above separable summation form. 
+    We now list the proximal mapping for each of the atomic operatons: $\lambda\log(\cdot), \lambda|\cdot|, \delta_{\Delta_n}$ and $\delta_{Ax = \mathbf 0}(\cdot)$. 
+    Most of then can be found in the literatures. 
+    \begin{align*}
+        \underset{-\lambda \log(\cdot)}{\text{prox}}(x)
+        &= 
+        \frac{x + \sqrt{x^2 + 4\lambda}}{2}
+        \\
+        \underset{\lambda |\cdot|}{\text{prox}}
+        &= 
+        \text{sign}(x) \max(|x| - \lambda, 0)
+        \\
+        \underset{\delta_{\Delta_n}}{\text{prox}}(x)&= 
+        \Pi_{\Delta_{n}}
+        \\
+        \underset{\delta_{\{Ax = \mathbf 0\}}}{\text{prox}} &= 
+        \Pi_{Ax = \mathbf 0}. 
+    \end{align*}
+    \subsection{Projection onto Probability Simplex and Sparse Linear System}
+        Projecting onto a probability simplex and a linar system that is sparse requires a bit more attention for software implementation sake. 
+        We introduce the following theorem from Beck textbook to assist with the projection onto a probability simplex. 
+        \begin{theorem}[Projecting onto Hyperplane Box Intersections]
+            Let $C\subseteq \mathbb R^n$ 
+        \end{theorem}
+        
+
 
 \appendix
 
