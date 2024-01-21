@@ -12,6 +12,9 @@
 \usepackage{url} 
 \urlstyle{same} % fix wacky url links in bib entries. 
 % \usepackage{minted}
+\usepackage{lineno}
+\renewcommand{\linenumberfont}{\tiny\color{gray}}
+\linenumbers
 
 % Basic Type Settings ----------------------------------------------------------
 \usepackage[margin=1in,footskip=0.25in]{geometry}
@@ -22,6 +25,7 @@
 \theoremstyle{definition}
 \newtheorem{theorem}{Theorem}       % Theorem counter global 
 \newtheorem{prop}{Proposition}[section]  % proposition counter is section
+\newtheorem{claim}{Claim}[subsection]
 \newtheorem{lemma}{Lemma}[subsection]  % lemma counter is subsection
 \newtheorem{definition}{Definition}
 \newtheorem{remark}{Remark}[subsection]
@@ -74,7 +78,7 @@
 }
 
 \title{Modeling and Algorithms for Prof Shit's Project}
-\author{Hongda Li, Yining Zhou}
+\author{Hongda Li, Yining Zhou, Xiaoping Shi}
 
 \begin{document}
 \maketitle
@@ -93,6 +97,7 @@
         \item [3.] $\eta_{ij} \ge 0$ for $i, j \in \{1, \cdots, n\}$ is a parameter of the problem. 
         \item [4.] $\hat p$ is the empirically measured probability transition matrix. They are the maximal likelihood estimators for the transition probability in the transition probability matrix. 
         \item [5.] $\lambda$ is the regularization parameter. 
+        \item [6.] $\mathbf C^m_n$ is the combinatoric term that counts all possible subset of size $n<m$ from a super set of size $m$. 
     \end{enumerate}
     When $p$ is referred to as a vector we may say $p \in \mathbb R^{n^2}$, if it's referred to as the matrix, we will use $p \in \mathbb R^{n\times n}$. 
     When indexing $p$ using a tuple, or a single number, it's possible to translate between the two type of indexing scheme using the following bijective map: 
@@ -106,51 +111,131 @@
     We emphasize, in different programming languages and development environments, the convention of indexing a muti-array using different kind of tuples can be very different. 
     For now we use the aboe indexing, which is a row major index convention (Like Python). 
     \subsection{The Optimization Problem}
-
-\section{Preliminaries}\label{sec:preliminaries}
-    \hyperref[sec:preliminaries]{This} is the preliminary (hyperref without text labeling). 
-    
-\section{Blah Blah Bleeeh}
-    % \begin{algorithm}
-    %     \begin{algorithmic}[t]
-    %         \STATE{\textbf{Input: $X^{(t)}$}}
-    %         \STATE{$Y^{(t)} \sim q (\cdot | X^{(t)})$}
-    %         \STATE{
-    %             $ 
-    %             \rho(x, y) := 
-    %             \min\left\lbrace
-    %                 \frac{f(y)}{f(x)}\frac{q(x|y)}{q(y|x)}, 1
-    %             \right\rbrace
-    %             $ 
-    %         }
-    %         \STATE{
-    %             $
-    %             X^{(t + 1)} := 
-    %             \begin{cases}
-    %                 Y^{(t)} & \text{w.p}:  \rho(X^{(t)}, Y^{(t)})
-    %                 \\
-    %                 X^{(t)} &  \text{otherwise}
-    %             \end{cases}$
-    %         }
-    %     \end{algorithmic}
-    %     \caption{Metropolis Chain}
-    %     \label{alg:mhc}
-    % \end{algorithm}
-    % \label{code:brain_expand}
-    % \lstinputlisting[language=julia, basicstyle=\ttfamily\scriptsize,numbers=left]{Code/juliacode.jl}
-    
-
-    
+        The optimization problem is posed as 
+        \begin{align}
+            &\underset{p \in \mathbb R^{n^2}}{\text{argmin}} 
+            \left\lbrace
+                \sum_{i = 1}^{n}\sum_{j = 1}^{n}
+                    -\eta_{ij}\log(p_{i, j})
+                + 
+                \lambda \sum_{i=1}^{n^2}\sum_{\substack{j=1\\j\neq i}}^{n^2}
+                \frac{1}{2}
+                \frac{|p_{i} - p_j|}{|\hat p_{i} - \hat p_j|}
+                \right\rbrace
+                \\
+                &\text{ s.t: }
+                \left\lbrace
+                \begin{aligned}
+                    \sum_{i = 1}^{n} p_{i, j} &= 1 \; && \forall i =1, \cdots, n 
+                    \\
+                    p_{i, j} &\ge 0\; &&\forall i= 1,\cdots, n, j = 1,\cdots, n 
+                \end{aligned}
+                \right\rbrace
+            \label{eqn:original_formulaion}
+        \end{align}
+        There are 3 parts to the optimization problem posed above. 
+        It has a smooth differentiable function, the sume of $\eta_{ij}\log(p_{i,j})$ but its gradient is not Lipschitz. 
+        The ias a non-smooth part with $p_i - p_j$ for all indices $1,\cdots, n^2$ and $i\neq j$. 
+        If $\hat p_i - \hat p_j = 0$, then we would ignore the term. 
+        Finally, it has a linear constraints on all $n^2$ variables. 
+        $p\in \mathbb R^{n^2}$ is a vector with the structure $\Delta_n\oplus\Delta_n\oplus \cdots \oplus \Delta_n$. 
+        Each $\Delta_n$ is a probability simplex. 
+        It's defined as $\Delta_n = \{x\in \mathbb R^n_+ : \sum_{i =1}^{n}x_n = 1\}$. 
+        For simplicity we just denote using notation $\Delta_{n\times n} = \Delta_n\oplus\Delta_n\oplus \cdots \oplus \Delta_n$. 
         
+
+\section{Modeling}
+    The nont-smooth part with the absolute value requires some amount of creativity if we were to use common optimization algorithms. 
+    \subsection*{Representation of the Non-smooth Part}
+        \begin{claim}
+            The nonsmooth objective can be model as 
+            \begin{align*}
+                \lambda \sum_{i=1}^{n^2}\sum_{\substack{j> i}}^{n^2}
+                \frac{|p_{i} - p_j|}{|\hat p_{i} - \hat p_j|}
+                &= 
+                \left\Vert
+                    Cp
+                \right\Vert_1 \quad 
+                \text{ where $C$ is $\mathbf C_2^{n^2}$ by $n^2$}. 
+            \end{align*}
+            The one norm represents the summation of absolute values. 
+            The transformation $\mathbf Cp$ is linear transformation and it's a vector of length $\mathbf C_2^{n^2}$. 
+            The vector is long and it has a dimension of $(1/2)(1 +n^2)n^2$. 
+            Each term inside of the summation is a row of the matrix $C$. 
+            Each row of matrix $C$ has exactly 2 non-zero elements in it. 
+            Suppose that $i\in \{1,\cdots,\mathbf C^{n^2}_2\}$ denoting the index for a specific row of matrix $C$ denotes the index of a specific row, and $j\in \{1, \cdots, n^2\}$ denotes a specific column of matrix $C$. 
+            Mathematically describing the matrix is difficult, but it can be algorithmically defined.
+            A sparse matrix format can be described by as a mapping from $(i,j)$, the set of all indices to the element in the vector. 
+            The following \hyperref[alg:matrix_make]{algorithm \ref*{alg:matrix_make}} construct such a mapping. 
+            \begin{algorithm}[H]
+                \begin{algorithmic}[1]
+                \STATE{Let $C$ be a $\mathbf C_2^{n^2}$ by $n^2$ zero matrix. }
+                \FOR{$i = 1,\cdots, n^2$}
+                    \FOR{$j = 1,\cdots, n^2$}
+                        \IF{$|\hat p_i - \hat p_j| == 0$} 
+                            \STATE{
+                                \textbf{Break}
+                            }
+                        \ENDIF
+                        \STATE{
+                            $C[in^2 + j, i] := \lambda/|\hat p_{i} - \hat p_{j}|$
+                            } 
+                        \STATE{
+                            $C[in^2 + j, j]:= -\lambda/|\hat p_{i} - \hat p_{j}|$ 
+                        }
+                    \ENDFOR
+                \ENDFOR
+                \end{algorithmic}\caption{Matrix Make Algorithm}
+                \label{alg:matrix_make}
+            \end{algorithm}
+        \end{claim}
+        \begin{remark}
+            In practice, we should use sparse matrix data format such as SCR, SCC in programming languages. 
+        \end{remark}
+    \subsection{Modeling it for Sequential Quadratic Programming}
+        To use sequential programming, we model the non-smooth $\Vert Cp\Vert_1$ parts of the objective function as a linear constraints. 
+        Define $u\in \mathbb R^{\mathbf C^{n^2}_2}_+$ then the below problem is equivalent to the original formulation: 
+        \begin{align*}
+            &\underset{
+                \substack{
+                        p, u
+                    }
+            }{\text{argmin}} 
+            \left\lbrace
+                \sum_{i = 1}^{n}\sum_{j = 1}^{n}
+                    -\eta_{ij}\log(p_{i, j})
+                + 
+                \sum_{i = 1}^{C_2^{n^2}} u_k
+            \right\rbrace
+            \\
+            &\text{ s.t: }
+            \left\lbrace
+            \begin{aligned}
+                - u \le Cp \le u
+                \\
+                p \in \Delta_{n\times n}
+                \\ 
+                u \in \mathbb R^{\mathbf C^{n^2}_2}_+
+            \end{aligned}
+            \right\rbrace
+        \end{align*}
+        This is a Non-linear programming problem and it has a convex objective. 
+        Common NLP packages in programming languages can solve this efficiently. 
+        However it's potentially possible that these solvers are not adapated to huge sparse matrix $C$ that has special structure to it. 
+        \begin{remark}
+            To formulate into a linear programming with some relaxations, consider that the non-linear objective $-\eta_{ij}\log(p_{i,j})$ can be discretized. 
+        \end{remark}
+    \subsection{Modeling it for Operator Splitting}
+        Operator splitting method aims for objective function of the type $f + g$ where $f, g$ are both convex function and they are proximal friendly. 
+        And $\text{ri.dom}(f)\cap \text{ri.dom}(g) \neq \emptyset$. 
+        Recall that proximal operator of function $f$ is the resolvent operator on the subgradient $(I + \partial f)^{-1}$. 
+        Subgradient is just a generalize type of gradient that can handle continuous function that is not necessarily differentiable. 
+        To model the original formulation in such a form, we need to introduce a lot of quantities. 
+        \begin{itemize}
+            \item 
+        \end{itemize}
+
 \appendix
-
-\section{Bleeh Bleeh Bleeh I am not Listening}
-    This is the Bleeh Bleeh Bleeh I am not Listening section. 
-
-\section{This section is in another .tex file} 
-    \input{Sections/section.tex}
-
-
 
 \bibliographystyle{IEEETran}
 \bibliography{refs.bib}
