@@ -252,14 +252,31 @@
             \item [2.] $f_2(x_2): \mathbb R^{\mathbf C^{n^2}_2}\mapsto \mathbb R := \Vert x_2\Vert_1$. 
             \item [3.] $f_3(x_3)= \mathbb R^{n^2}\mapsto \mathbb {\bar R}:= \delta_{\Delta_{n\times n}}(x_3)$
         \end{itemize}
-        The above 3 functions models the three parts of the objective function. 
+        The above 3 functions represent the three parts of the summed objective. 
         Let $f(x_1, x_2, x_3):= f_1(x_1) + f_2(x_2) + f_3(x_3)$. 
         However, they share different variables $x_1, x_2, x_3$, from different dimension. 
         We want $g$ to represents the constraints that $x_2 = Cp$, and $x_1 = x_3 = p$. 
         Simplifying: $x_2 = C x_1, x_1 = x_3$. 
         This is a linear system of the form
-        
-
+        \begin{align*}
+            \begin{bmatrix}
+                C & -I & \mathbf 0
+                \\
+                I & \mathbf 0 & -I
+            \end{bmatrix}
+            \begin{bmatrix}
+                x_1 \\ x_2 \\ x_3
+            \end{bmatrix}
+            &= \mathbf 0. 
+        \end{align*}
+        Simply denote the above as $A x = \mathbf 0$, then $g$ is just a non-smooth function that happens to be an indicator function of a convex set. 
+        The convex set is the set of all solutions to the linear system. 
+        Therefore setting $g = \delta_{Ax = \mathbf 0}(x)$, to be the indicator of the linear constraints, we had a complete equivalent representation of the original form of the problem. 
+        \par
+        The matrix $A$ is a $(\mathbf C^{n^2}_2 + n^2) \times (3n^2)$ matrix. 
+        It's still a sparse matrix. 
+        Conviently, if we use $\otimes$ then the above matrix admit kronecker product representation: 
+\subsection{Implementation, Software, and Toolings}
 
 \appendix
 
