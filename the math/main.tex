@@ -92,7 +92,7 @@
 
 
 \section{Introduction}
-    We describe an optimization problem introduce by Prof Shi and his student Yining. 
+    We describe an optimization problem introduced by Prof Shi and his student Yining. 
     To start we define the following quantities for the optimization problem. 
     \begin{itemize}
         \item [1.] $n\in \mathbb N$. It denotes the numer of states for a Markov Chain. 
@@ -211,6 +211,7 @@
         \end{remark}
     \subsection{Modeling it for Sequential Quadratic Programming}
     \begin{linenumbers}
+        To start, refer to \href{https://en.wikipedia.org/wiki/Sequential_quadratic_programming}{Seqential Qaudratic Programming Wikipedia} for brief overview about what sequential quadratic programming problem is. 
         To use sequential programming, we model the non-smooth $\Vert Cp\Vert_1$ parts of the objective function as a linear constraints. 
         Define $u\in \mathbb R^{\mathbf C^{n^2}_2}_+$ then the below problem is equivalent to the original formulation:
     \end{linenumbers}
@@ -255,12 +256,15 @@
             \item [2.] $f_2(x_2): \mathbb R^{\mathbf C^{n^2}_2}\mapsto \mathbb R := \Vert x_2\Vert_1$. 
             \item [3.] $f_3(x_3)= \mathbb R^{n^2}\mapsto \mathbb {\bar R}:= \delta_{\Delta_{n\times n}}(x_3)$
         \end{itemize}
-        The above 3 functions represent the three parts of the summed objective. 
-        Let $f(x_1, x_2, x_3):= f_1(x_1) + f_2(x_2) + f_3(x_3)$. 
-        However, they share different variables $x_1, x_2, x_3$, from different dimension. 
-        We want $g$ to represents the constraints that $x_2 = Cp$, and $x_1 = x_3 = p$. 
-        Simplifying: $x_2 = C x_1, x_1 = x_3$. 
-        This is a linear system of the form
+        \begin{linenumbers}
+            The above three functions represent the three parts of the summed objective. 
+            \\
+            Let $f(x_1, x_2, x_3):= f_1(x_1) + f_2(x_2) + f_3(x_3)$. 
+            However, they share different variables $x_1, x_2, x_3$, from different dimension. 
+            We want $g$ to represents the constraints that $x_2 = Cp$, and $x_1 = x_3 = p$. 
+            Simplifying: $x_2 = C x_1, x_1 = x_3$. 
+            This is a linear system of the form    
+        \end{linenumbers}
         \begin{align*}
             \begin{bmatrix}
                 C & -I & \mathbf 0
@@ -279,14 +283,18 @@
         The matrix $A$ is a $(\mathbf C^{n^2}_2 + n^2) \times (3n^2)$ matrix. 
         It's still a sparse matrix. 
         Conviently, if we use $\otimes$ then the above matrix admit kronecker product representation: 
-    \subsection*{A Quick Tour into Operator Splitting Method}
+    \subsection{Another Method that is not Cursed by the Dimension}
+        ...
+    \subsection{A Quick Tour into Operator Splitting Method}
         Operator splitting method is relatively new and doesn't have a mature toolings in software. 
-        We describe the algorithm in this section to provide context in the up comming part that discuss the implementations details. 
-\subsection{Implementation, Software, and Toolings}
+        Using the method requires the use of the Proximal Mapping, which can be non-trivial to implement for even simple functions. 
+        Read section \cite[section 2.7]{ryu_large-scale_2022} of Ryu's Textbook for more information about the algorithm and operator splitting in general. 
+        
+        
+\section{Implementation, Software, and Toolings}
     The software for Squential Quadratic programming is relatively mature. 
     Whether they support sparse matrix inversion depends on the developers. 
     The software operator splitting method is less common.
-
     To use Operator splitting method such as Douglas Rachford (Equivalently the ADMM via a the Dual), Peachman Rachford, it's required to compute the proximal operator of functions. 
     The following theorem is relevant to efficiently compute the proximal mapping for our model. 
     \begin{theorem}[Separable Proximal Theorem]
@@ -297,8 +305,9 @@
             (\text{prox}_{f_1, \lambda}(x_1), \text{prox}_{f_2, \lambda}(x_2), \cdots \text{prox}_{f_m, \lambda}(x_m)).
         \end{aligned}
         $$
-        In general, if there exists any permutation of the list of $x_1, x_2, \cdots, x_m$, the parallelization property of prox will be come applicable. 
+        In general, if there exists any permutation of the list of $x_1, x_2, \cdots, x_m$, the parallelization property of prox will be come applicable.     
     \end{theorem}
+
     \begin{linenumbers}
         Recall objective $f(x_1, x_2, x_3) = f_1(x_1) + f_2(x_2) + f_3(x_3)$ from section \ref*{sec:opsplit_model}. It has the applicable form and hence we have:     
     \end{linenumbers}
@@ -318,9 +327,11 @@
         \delta_{\Delta_{n\times n}}(x_3) = 
         \sum_{i = 1}^{n} \delta_{\Delta_n}(x_{3, i}). 
     \]
-    The indictor function $\delta_{\Delta_{n\times n}}$ acts on groups of $n$ elements in the vector $x_3$ individually and separately, hence it admits the above separable summation form. 
-    We now list the proximal mapping for each of the atomic operatons: $\lambda\log(\cdot), \lambda|\cdot|, \delta_{\Delta_n}$ and $\delta_{Ax = \mathbf 0}(\cdot)$. 
-    Most of then can be found in the literatures. 
+    \begin{linenumbers}
+        The indictor function $\delta_{\Delta_{n\times n}}$ acts on groups of $n$ elements in the vector $x_3$ individually and separately, hence it admits the above separable summation form. 
+        We now list the proximal mapping for each of the atomic operatons: $\lambda\log(\cdot), \lambda|\cdot|, \delta_{\Delta_n}$ and $\delta_{Ax = \mathbf 0}(\cdot)$. 
+        Most of then can be found in the literatures.     
+    \end{linenumbers}
     \begin{align*}
         \underset{-\lambda \log(\cdot)}{\text{prox}}(x)
         &= 
@@ -339,9 +350,51 @@
     \subsection{Projection onto Probability Simplex and Sparse Linear System}
         Projecting onto a probability simplex and a linar system that is sparse requires a bit more attention for software implementation sake. 
         We introduce the following theorem from Beck textbook to assist with the projection onto a probability simplex. 
-        \begin{theorem}[Projecting onto Hyperplane Box Intersections]
-            Let $C\subseteq \mathbb R^n$ 
+        \begin{theorem}[Projecting onto Hyperplane Box Intersections]\label{thm:proj_master}
+            Let $C\subseteq \mathbb R^n$ to be non-empty and defined as $C := \text{Box}[l, u] \cap H_{a, b}^=$, 
+            where $\text{Box}[l, u] = \{x\in \mathbb R^n : l \le x \le u\}$. We assume that $l\in [-\infty, \infty)$ and $u\in (-\infty, \infty]$. 
+            And $H_{a, b}^= = \{x\in \mathbb R^n: \langle a, x\rangle = b\}$, where $a \in \mathbb R^n \setminus \{\mathbf 0\}$. 
+            Then the projection onto the set is equivalent to the following conditions 
+            \begin{align*}
+                &\Pi_C(x) = \Pi_{\text{box}[l, u]}(x - \mu a)
+                \\
+                &\text{where }u \in \mathbb R \text{ solves: } \langle a, \Pi_{\text{Box}[l, u]}(x - u a)\rangle = b. 
+            \end{align*}
         \end{theorem}
+        \begin{proof}
+            See \cite[thereom 6.27]{beck_first-order_nodate} by Beck for more information. 
+        \end{proof}
+        \begin{remark}
+            The equation for $u$ has a continuous mapping $\mathbb R \mapsto \mathbb R$, it can be solved efficiently using method such as the bisection method. 
+        \end{remark}
+        \begin{theorem}[Projecting onto the Probability Simplex]\label{thm:proj_prob_simplex}
+            The projection onto the simplex $\Delta_n$ can be computed via 
+            \begin{align*}
+                & \Pi_{\Delta_n}(x) = \Pi_{\mathbb R_+}(x - \mu a)
+                \\
+                & \text{where }\mu \in \mathbb R \text{ solves: } \langle \mathbf 1, \Pi_{\mathbb R_+}(x - \mu \mathbf 1)\rangle = 1.     
+            \end{align*}
+        \end{theorem}
+        \begin{proof}
+            Use the previous theorem \ref*{thm:proj_master}, observe that $u$ can be a vector of infinity and hence setting $\mathbb R_+$ to be the box, and the probability simplex consrants $\sum_{i = 1}^{n}x_i = 1$ is the hyperplane $H_{a, b}^=$ with $a = \mathbf 1, b = 1$. 
+        \end{proof}
+        \begin{theorem}[Projection onto Affine Spaces]
+            Define the set $C = \{x\in \mathbb R^n : Ax = b\}$, assuming that $A\in \mathbb R^{m\times n}$ is full rank, then the projection onto the set is compted via 
+            \begin{align*}
+                \Pi_{C}(x) = x - (A^TA)^{-1}A(Ax - b). 
+            \end{align*}
+        \end{theorem}
+        \begin{remark}
+            In the case when $A$ is not full rank, do a reduce QR decomposition of $A = Q R$ where $R$ is $k\times n$ with $k < m$. 
+            In the case of our application, the matrix $A$ is a full rank matrix. 
+            The matrix $(A^TA)^{-1}$ in our case can be very slow to invert since it's $\mathbf C^{n^2}_2 \times \mathbf C^{n^2}_2$. 
+            One way to make it easier is to use sparse matrix invert method. 
+            In our case the matrix we are inverting is sparse and symmetric, it can be solved efficiently say for example, 
+        \end{remark}
+    \subsection{The Software for These Algorithms}
+        option \href{https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html}{SLSQP} in ``scipy.optimize.minimize'' performs sequential quadratic programming. 
+        I am not sure whether they would support efficient sparse matrix inverse. 
+
         
 
 
