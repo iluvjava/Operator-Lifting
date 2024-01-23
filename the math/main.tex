@@ -153,8 +153,6 @@
         Each $\Delta_n$ is a probability simplex. 
         It's defined as $\Delta_n = \{x\in \mathbb R^n_+ : \sum_{i =1}^{n}x_n = 1\}$. 
         For simplicity we just denote using notation $\Delta_{n\times n} = \Delta_n\oplus\Delta_n\oplus \cdots \oplus \Delta_n$. 
-        
-        
 
 \section{Modeling}
     
@@ -282,7 +280,7 @@
         \par
         The matrix $A$ is a $(\mathbf C^{n^2}_2 + n^2) \times (3n^2)$ matrix. 
         It's still a sparse matrix. 
-        Conviently, if we use $\otimes$ then the above matrix admit kronecker product representation: 
+        The matrix would have to be encoded carefully by translating copies of the same matrix to 3 different locations. 
     \subsection{Another Method that is not Cursed by the Dimension}
         ...
     \subsection{A Quick Tour into Operator Splitting Method}
@@ -337,11 +335,11 @@
         &= 
         \frac{x + \sqrt{x^2 + 4\lambda}}{2}
         \\
-        \underset{\lambda |\cdot|}{\text{prox}}
+        \underset{\lambda |\cdot|}{\text{prox}}(x)
         &= 
         \text{sign}(x) \max(|x| - \lambda, 0)
         \\
-        \underset{\delta_{\Delta_n}}{\text{prox}}(x)&= 
+        \underset{\delta_{\Delta_n}}{\text{prox}}&= 
         \Pi_{\Delta_{n}}
         \\
         \underset{\delta_{\{Ax = \mathbf 0\}}}{\text{prox}} &= 
