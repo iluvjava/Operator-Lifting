@@ -392,7 +392,11 @@
     \subsection{The Software for These Algorithms}
         Option \href{https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html}{SLSQP} in ``scipy.optimize.minimize'' performs sequential quadratic programming. 
         I am not sure whether they would support efficient sparse matrix inverse. 
+        \href{https://en.wikipedia.org/wiki/Interior-point_method}{Interior points method} (the engine behind many constraint optimization solver) is also a good way of solving the problem, it's also more specialized than the SLSQP solver. 
+        However their availability in python seems to be limited.
+        See \href{https://docs.scipy.org/doc/scipy/tutorial/optimize.html}{here} for tutorials about how to use ``scipy.optimize'' module. 
         Visits \href{https://pyproximal.readthedocs.io/en/stable/tutorials/index.html}{pyprox} for a package that implements various type of proximal operators in python.
+        
 
         
 
