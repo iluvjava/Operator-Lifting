@@ -208,11 +208,9 @@
             In practice, we should use sparse matrix data format such as SCR, SCC in programming languages. 
         \end{remark}
     \subsection{Modeling it for Sequential Quadratic Programming}
-    \begin{linenumbers}
         To start, refer to \href{https://en.wikipedia.org/wiki/Sequential_quadratic_programming}{Seqential Qaudratic Programming Wikipedia} for brief overview about what sequential quadratic programming problem is. 
         To use sequential programming, we model the non-smooth $\Vert Cp\Vert_1$ parts of the objective function as a linear constraints. 
         Define $u\in \mathbb R^{\mathbf C^{n^2}_2}_+$ then the below problem is equivalent to the original formulation:
-    \end{linenumbers}
         \begin{align}
             &\underset{
                 \substack{
@@ -254,15 +252,13 @@
             \item [2.] $f_2(x_2): \mathbb R^{\mathbf C^{n^2}_2}\mapsto \mathbb R := \Vert x_2\Vert_1$. 
             \item [3.] $f_3(x_3): \mathbb R^{n^2}\mapsto \mathbb {\bar R}:= \delta_{\Delta_{n\times n}}(x_3)$
         \end{itemize}
-        \begin{linenumbers}
-            The above three functions represent the three parts of the summed objective. 
-            \\
-            Let $f(x_1, x_2, x_3):= f_1(x_1) + f_2(x_2) + f_3(x_3)$. 
-            However, they share different variables $x_1, x_2, x_3$, from different dimension. 
-            We want $g$ to represents the constraints that $x_2 = Cp$, and $x_1 = x_3 = p$. 
-            Simplifying: $x_2 = C x_1, x_1 = x_3$. 
-            This is a linear system of the form    
-        \end{linenumbers}
+        The above three functions represent the three parts of the summed objective. 
+        \\
+        Let $f(x_1, x_2, x_3):= f_1(x_1) + f_2(x_2) + f_3(x_3)$. 
+        However, they share different variables $x_1, x_2, x_3$, from different dimension. 
+        We want $g$ to represents the constraints that $x_2 = Cp$, and $x_1 = x_3 = p$. 
+        Simplifying: $x_2 = C x_1, x_1 = x_3$. 
+        This is a linear system of the form    
         \begin{align*}
             \begin{bmatrix}
                 C & -I & \mathbf 0
@@ -305,10 +301,7 @@
         $$
         In general, if there exists any permutation of the list of $x_1, x_2, \cdots, x_m$, the parallelization property of prox will be come applicable.     
     \end{theorem}
-
-    \begin{linenumbers}
-        Recall objective $f(x_1, x_2, x_3) = f_1(x_1) + f_2(x_2) + f_3(x_3)$ from section \ref*{sec:opsplit_model}. It has the applicable form and hence we have:     
-    \end{linenumbers}
+    Recall objective $f(x_1, x_2, x_3) = f_1(x_1) + f_2(x_2) + f_3(x_3)$ from section \ref*{sec:opsplit_model}. It has the applicable form and hence we have:     
     \[
         \underset{\lambda f}{\text{prox}}((x_1, x_2, x_3))
         = 
@@ -316,20 +309,16 @@
         \underset{\lambda f_2}{\text{prox}}(x_2) \oplus
         \underset{\lambda f_3}{\text{prox}}(x_3). 
     \]
-    \begin{linenumbers}
-        Next, we proceed to write each $f_i$ for $i = 1, 2, 3$ into separable sum as well. 
-        $f_1, f_2$ are trivial to do however $\delta_{\Delta_{n\times n}}$ requires some thought. 
-        Consider $x_3 = \bigoplus_{i = 1}^n x_{3, i}$, so that the vector is the direct product, then     
-    \end{linenumbers}
+    Next, we proceed to write each $f_i$ for $i = 1, 2, 3$ into separable sum as well. 
+    $f_1, f_2$ are trivial to do however $\delta_{\Delta_{n\times n}}$ requires some thought. 
+    Consider $x_3 = \bigoplus_{i = 1}^n x_{3, i}$, so that the vector is the direct product, then     
     \[
         \delta_{\Delta_{n\times n}}(x_3) = 
         \sum_{i = 1}^{n} \delta_{\Delta_n}(x_{3, i}). 
     \]
-    \begin{linenumbers}
-        The indictor function $\delta_{\Delta_{n\times n}}$ acts on groups of $n$ elements in the vector $x_3$ individually and separately, hence it admits the above separable summation form. 
-        We now list the proximal mapping for each of the atomic operatons: $\lambda\log(\cdot), \lambda|\cdot|, \delta_{\Delta_n}$ and $\delta_{Ax = \mathbf 0}(\cdot)$. 
-        Most of then can be found in the literatures.     
-    \end{linenumbers}
+    The indictor function $\delta_{\Delta_{n\times n}}$ acts on groups of $n$ elements in the vector $x_3$ individually and separately, hence it admits the above separable summation form. 
+    We now list the proximal mapping for each of the atomic operatons: $\lambda\log(\cdot), \lambda|\cdot|, \delta_{\Delta_n}$ and $\delta_{Ax = \mathbf 0}(\cdot)$. 
+    Most of then can be found in the literatures.     
     \begin{align*}
         \underset{-\lambda \log(\cdot)}{\text{prox}}(x)
         &= 
@@ -389,14 +378,28 @@
             One way to make it easier is to use sparse matrix invert method. 
             In our case the matrix we are inverting is sparse and symmetric, it can be solved efficiently say for example, 
         \end{remark}
-    \subsection{The Software for These Algorithms}
-        Option \href{https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html}{SLSQP} in ``scipy.optimize.minimize'' performs sequential quadratic programming. 
-        I am not sure whether they would support efficient sparse matrix inverse. 
-        \href{https://en.wikipedia.org/wiki/Interior-point_method}{Interior points method} (the engine behind many constraint optimization solver) is also a good way of solving the    problem, it's also more specialized than the SLSQP solver. 
-        However their availability in python seems to be limited.
-        See \href{https://docs.scipy.org/doc/scipy/tutorial/optimize.html}{here} for tutorials about how to use ``scipy.optimize'' module. 
-        Visits \href{https://pyproximal.readthedocs.io/en/stable/tutorials/index.html}{pyprox} for a package that implements various type of proximal operators in python.
-        
+\section{The Software for These Algorithms}
+    Option \href{https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html}{SLSQP} in ``scipy.optimize.minimize'' performs sequential quadratic programming. 
+    I am not sure whether they would support efficient sparse matrix inverse. 
+    \href{https://en.wikipedia.org/wiki/Interior-point_method}{Interior points method} (the engine behind many constraint optimization solver) is also a good way of solving the    problem, it's also more specialized than the SLSQP solver. 
+    However their availability in python seems to be limited.
+    See \href{https://docs.scipy.org/doc/scipy/tutorial/optimize.html}{here} for tutorials about how to use ``scipy.optimize'' module. 
+    Visits \href{https://pyproximal.readthedocs.io/en/stable/tutorials/index.html}{pyprox} for a package that implements various type of proximal operators in python.
+    \subsection{Scipy.optimize.SLSQP}
+        The ``scipy.SLSQP" programming API accepts programming problem of the following form 
+        \begin{align*}
+            & \min_{l \le x\le u} 
+            f(x)
+            \text{ s.t: }
+            \\
+            & 
+            \begin{cases}
+                c_j(x) = 0, & j \in \Upsilon
+                \\
+                c_j(x) = 0, & j \in \mathcal I    
+            \end{cases}
+        \end{align*}
+        For each element $i=1,\cdots, N$, we have the constraints in the form of 
 
         
 
