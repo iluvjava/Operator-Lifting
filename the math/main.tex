@@ -207,7 +207,7 @@
         \begin{remark}
             In practice, we should use sparse matrix data format such as SCR, SCC in programming languages. 
         \end{remark}
-    \subsection{Modeling it for Sequential Quadratic Programming}
+    \subsection{Modeling it for Sequential Quadratic Programming}\label{sec:sqp_formulation}
         To start, refer to \href{https://en.wikipedia.org/wiki/Sequential_quadratic_programming}{Seqential Qaudratic Programming Wikipedia} for brief overview about what sequential quadratic programming problem is. 
         To use sequential programming, we model the non-smooth $\Vert Cp\Vert_1$ parts of the objective function as a linear constraints. 
         Define $u\in \mathbb R^{\mathbf C^{n^2}_2}_+$ then the below problem is equivalent to the original formulation:
@@ -221,7 +221,7 @@
                 \sum_{i = 1}^{n}\sum_{j = 1}^{n}
                     -\eta_{ij}\log(p_{i, j})
                 + 
-                \sum_{i = 1}^{C_2^{n^2}} u_k
+                \sum_{i = 1}^{\mathbf C_2^{n^2}} u_k
             \right\rbrace
             \\
             &\text{ s.t: }
@@ -378,10 +378,10 @@
             One way to make it easier is to use sparse matrix invert method. 
             In our case the matrix we are inverting is sparse and symmetric, it can be solved efficiently say for example, 
         \end{remark}
-\section{The Software for These Algorithms}
+\section{The Software APIs for the Programmers}
     Option \href{https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html}{SLSQP} in ``scipy.optimize.minimize'' performs sequential quadratic programming. 
     I am not sure whether they would support efficient sparse matrix inverse. 
-    \href{https://en.wikipedia.org/wiki/Interior-point_method}{Interior points method} (the engine behind many constraint optimization solver) is also a good way of solving the    problem, it's also more specialized than the SLSQP solver. 
+    \href{https://en.wikipedia.org/wiki/Interior-point_method}{Interior points method} (the engine behind many constraint optimization solver) is also a good way of solving the problem, it's also more specialized than the SLSQP solver. 
     However their availability in python seems to be limited.
     See \href{https://docs.scipy.org/doc/scipy/tutorial/optimize.html}{here} for tutorials about how to use ``scipy.optimize'' module. 
     Visits \href{https://pyproximal.readthedocs.io/en/stable/tutorials/index.html}{pyprox} for a package that implements various type of proximal operators in python.
@@ -397,14 +397,54 @@
             \begin{cases}
                 c_j(x) = 0, & j \in \Upsilon
                 \\
-                c_j(x) \ge 0, & j \in \mathcal I    
+                g_j(x) \ge 0, & j \in \mathcal I    
             \end{cases}
         \end{align*}
-        For each element $i=1,\cdots, N$, we have the constraints in the form of $l_i \in [-\infty, \infty)$ and $u_i \in (-\infty, \infty]$. 
-        The programmer is required to provide $\nabla f(x)$, the gradient of the objective. 
+        For each element $i=n,\cdots, N$, we have the constraints in the form of $l_i \in [-\infty, \infty)$ and $u_i \in (-\infty, \infty]$. 
+        The programmer is required to provide 
+        \begin{itemize}
+            \item[1.] $\nabla f(x)$, the gradient of the objective and the objective function in the form of a function handle in python. 
+            \item[2.] 
+        \end{itemize}
+        
         Representing the sequence of constraints $c_j(x)$ for $J \in \Upsilon$ as a vector function $C(x)$. 
         Similarly, we represent inequality constraints as the vector funtion $G(x)$. 
+        Recall formulation from \hyperref[sec:sqp_formulation]{section \ref*{sec:sqp_formulation}}. 
+        The inequality constraints are $-u \le Cp \le u$, $p \in \Delta_{n\times n}$. 
+        The box constraint is $u\in \mathbb R_+^{\mathbf C_2^{n^2}}$. 
+        The equality and inequality constriants can be modeled by the linear system: 
+        \begin{align*}
+            \underbrace{\begin{bmatrix}
+                -C & I
+                \\
+                C & I
+            \end{bmatrix}}_{=: \mathcal C}
+            \begin{bmatrix}
+                p \\ u
+            \end{bmatrix}
+            \ge
+            \mathbf 0 
+            \\
+            \underbrace{
+                \begin{bmatrix}
+                    \mathbf 1_n^T  & & &
+                    \\
+                    & \mathbf 1_n^T & &
+                    \\
+                    & & \ddots & 
+                    \\
+                    & & & \mathbf 1_n^T
+                \end{bmatrix}
+            }_{\mathcal G}
+            p &= \mathbf 0.
+        \end{align*}
+        Here $\mathbf 1_n \in \mathbb R^n$ is a vector of $1$. 
+        Observe that, $\mathcal C$ is a $2 \mathbf C_2^{n^2}$ by $2n + \mathbf C_2^{n^2}$ matrix. 
+
         
+
+
+
 
 
         
