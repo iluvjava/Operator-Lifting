@@ -6,9 +6,24 @@ import itertools
 
 
 def main(): 
+
     pass
 
 
+
+"""
+
+Conduct the following: 
+- Maximal likelihood estiamtion for the probability transition matrix given discrete transition states encoded in 
+integers 0, ..., n. it stores this. 
+- Formulate the coefficients lambda*|p_hat(i) - p_hat(j)| for the constraints, it stores this. 
+- Compute necessary modeling informatoin for the Scipy optimize API and stores them. 
+    - objective function and gradient for the smooth objective
+    - Sparse constraints matrix and the Jacobi of the constraint system. 
+"""
+class ProblemModelingSQP:
+    def __init__(self):
+        pass
 
 
 
