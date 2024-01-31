@@ -163,11 +163,11 @@ def make_objective_fxngrad(ncounts):
 
 
 
-def make_eqcon_fxnjac():
+def make_eqcon_fxnjac(n:int):
     """
     returns : (:Callable, :Callable)
     """
-    
+
     pass
 
 
