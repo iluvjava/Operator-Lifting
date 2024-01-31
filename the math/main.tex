@@ -440,7 +440,23 @@
         \end{align*}
         Here $\mathbf 1_n \in \mathbb R^n$ is a vector of $1$. 
         Observe that, $\mathcal C$ is a $2 \mathbf C_2^{n^2}$ by $2n + \mathbf C_2^{n^2}$ matrix. 
-
+        Finally, the gradient of the objective function would be a vector with dimension $n^2 + \mathbf C_2^{n^2}$. 
+        \newcommand{\elew}[1]{\;\textbf{#1}}
+        Denote $\div$, to indicate that this is an operator that does element-wise division.
+        For example, in below, we have $-\eta\div p$ , which means dividing each element of the vector $\mu$ by element of the vector $p$, resulting in an element of the same dimension. 
+        \begin{align}
+            \nabla \left[
+                \sum_{i = 1}^{n^2} - \eta_{i} \log(p_i)
+                + 
+                \sum_{i = 1}^{\mathbf C_2^{n^2}} u_k
+            \right]&= 
+            \begin{bmatrix}
+                -\eta \div p
+                \\
+                \mathbf 1_{\mathbf C_2^{n^2}}
+            \end{bmatrix}. 
+        \end{align}
+        At this point, we have everything ready for coding it up in python. 
         
 
 
