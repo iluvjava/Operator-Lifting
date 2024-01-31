@@ -122,7 +122,7 @@ def empirical_mle_transmatrix(observed):
 
 
 
-def make_objective_fxngrad(mtx, ncounts):
+def make_objective_fxngrad(ncounts):
     """
     ### Description: 
 
@@ -142,13 +142,24 @@ def make_objective_fxngrad(mtx, ncounts):
     - objfxngrad: A callable function that takes in a numpy array of length: n^2 + Combinatorics(n^2, 2)
         It returns the gradient of the objective function. 
     """
+    n = len(ncounts)
     def ObjectiveMake(x): 
+        # x here is literally the transition matrix (in vector form) we are trying to optimize. 
+        # This function should get called by scipy.optimize internal code! 
+        p = x[0:n**2]
+        u = x[n**2 + 1:]
+        prd = -np.log(p.reshape((-1,))*ncounts.reshape((-1,)))
+        return prd + np.sum(u)
         
-        pass
+
     def ObjectiveGrad(x):
-        pass
-    
-    pass
+        # x here is literally the transition matrix (in vector form) we are trying to optimize. 
+        # This function should get called by scipy.optimize internal code! 
+        p = x[0:n**2]
+        u = x[n**2 + 1:]
+        return np.vcat(ncounts/p, np.ones_like(u))
+        
+    return ObjectiveMake, ObjectiveGrad
 
 
 
@@ -156,14 +167,16 @@ def make_eqcon_fxnjac():
     """
     returns : (:Callable, :Callable)
     """
+    
     pass
 
 
 
-def make_ineqcon_fxnjac():
+def make_ineqcon_fxnjac(conmtx):
     """
     returns : (:Callable, :Callable)
     """
+
     pass
 
 
