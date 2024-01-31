@@ -10,7 +10,6 @@ import numbers
 
 
 class ProblemModelingSQP:
-
     """
 
     Conduct the following: 
@@ -27,27 +26,29 @@ class ProblemModelingSQP:
             raise TypeError(f"lmbd passed to __init__ for {type(self)} should be int.")
         if lmbd < 0: 
             raise ValueError(f"lmbd passed to __int__ for {type(self)} should be nonegative. ")
-        self.lmbd = 1
-        self.TransitionMatrix, self.states = empirical_mle_transmatrix(observed_sequence)
         self.lmbd = lmbd
-        self.ConstraintMatrixC = make_matrix(self.TransitionMatrix, lmbd)
+        Tcount, self.TransitionMatrix, self.states = empirical_mle_transmatrix(observed_sequence)
+        self.TransitionCounts = Tcount.reshape((-1, 1)) # To column vector. 
+        self.ConstraintMatrixC = make_matrix(self.TransitionMatrix, lmbd).todense()
         return None
     
-    def borrow_transmatrix():
+    def mirror_transmatrix(self):
+        """
+        Borrow the resource for the transition matrix. Called "mirror" due shallow copying in python. 
+        """
+        return self.TransitionMatrix
 
-        pass
+    def mirror_constraint_matrix(self):
+        return self.ConstraintMatrixC
 
-    def borrow_constraint_matrix():
-
-        pass
-
-    def borrow_grad_fxn():
+    def mirror_grad_fxn(self):
+        
         pass
     
-    def idx2state():
+    def idx2state(self):
         pass
 
-    def state2idx():
+    def state2idx(self):
         pass
 
 
@@ -107,18 +108,63 @@ def empirical_mle_transmatrix(observed):
         observed = list(observed)    
         ObservedStates = list(set(observed))
         States2Idx = dict([(state, idx) for idx, state in enumerate(ObservedStates)])
-
         ObservedIdx = [States2Idx[state] for state in observed]
         # compute states and make matrix. 
         n = len(ObservedStates)
-        TransitionMatrix = np.zeros((n, n))
+        TransitionCountMatrix = np.zeros((n, n))
         for (pre, cur) in zip(ObservedIdx[:-1], ObservedIdx[1:]):
-            TransitionMatrix[pre, cur] += 1
+            TransitionCountMatrix[pre, cur] += 1
         # normalize by row sum. 
-        RowCounts = np.sum(TransitionMatrix, axis=0).reshape((1, -1))
-        return TransitionMatrix/RowCounts, ObservedStates
+        RowCounts = np.sum(TransitionCountMatrix, axis=0).reshape((1, -1))
+        return TransitionCountMatrix, TransitionCountMatrix/RowCounts, ObservedStates
     else:
         raise TypeError("Argument states/observed is not itertable. ")
+
+
+
+def make_objective_fxngrad(mtx, ncounts):
+    """
+    ### Description: 
+
+    This function prepare callable functions that are the objective function and the gradient of the objective function for the problem. 
+    These callable functions will be used for the SQP interface of scipy. 
+    ---
+
+    ### parameters
+    ---
+    - mtx: The probability transition matrix estimated via simple MLE. 
+    - ncounts: a vector of length n^2 denote the total count of i->j transiiton for states. 
+
+    ### returns : (objfxn:Callable, objfxngrad:Callable)
+    ---
+    - objfxn: A callable function that takes in a numpy array of length: n^2 + Combinatorics(n^2, 2). 
+        It returns the objective value of the function. 
+    - objfxngrad: A callable function that takes in a numpy array of length: n^2 + Combinatorics(n^2, 2)
+        It returns the gradient of the objective function. 
+    """
+    def ObjectiveMake(x): 
+        
+        pass
+    def ObjectiveGrad(x):
+        pass
+    
+    pass
+
+
+
+def make_eqcon_fxnjac():
+    """
+    returns : (:Callable, :Callable)
+    """
+    pass
+
+
+
+def make_ineqcon_fxnjac():
+    """
+    returns : (:Callable, :Callable)
+    """
+    pass
 
 
 
@@ -132,8 +178,11 @@ def SQP_solve():
 
 
 def main(): 
-
-    pass
+    global TESTSTRING
+    TESTSTRING = "ABCCBA"
+    global pbm
+    pbm = ProblemModelingSQP(TESTSTRING)
+    return None
 
 
 if __name__ == "__main__":
