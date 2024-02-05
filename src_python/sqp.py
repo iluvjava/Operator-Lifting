@@ -11,7 +11,6 @@ import numbers
 
 class ProblemModelingSQP:
     """
-
     Conduct the following: 
     - Maximal likelihood estiamtion for the probability transition matrix given discrete transition states encoded in 
     integers 0, ..., n. it stores this. 
@@ -20,16 +19,49 @@ class ProblemModelingSQP:
         - objective function and gradient for the smooth objective
         - Sparse constraints matrix and the Jacobi of the constraint system. 
     
+    ---
+    ### Attributes 
+    - TransitionMatrix
+    - States
+    - TrstCntsVec
+    - ConstraintMatrixC
+    - ObjFxn
+    - ObjGrad
+    - EqnCon
+    - EqnJac
+    - IneqCon
+    - IneqJac
     """    
+    
     def __init__(self, observed_sequence, lmbd=1):
+        """_summary_
+
+        Args:
+            observed_sequence (iterable): some type of iteratble in python. 
+            lmbd (int, optional): the regularization panalty term. Defaults to 1.
+
+        Raises:
+            TypeError: error is thrown if lambd is not an instance of a number. 
+            ValueError: error is thrown when the lmbd is a negative value. 
+
+        Returns:
+            None: null. 
+        """
         if not isinstance(lmbd, numbers.Number): 
             raise TypeError(f"lmbd passed to __init__ for {type(self)} should be int.")
         if lmbd < 0: 
             raise ValueError(f"lmbd passed to __int__ for {type(self)} should be nonegative. ")
         self.lmbd = lmbd
-        Tcount, self.TransitionMatrix, self.states = empirical_mle_transmatrix(observed_sequence)
-        self.TransitionCounts = Tcount.reshape((-1, 1)) # To column vector. 
-        self.ConstraintMatrixC = make_matrix(self.TransitionMatrix, lmbd).todense()
+
+        Tcount, self.TransitionMatrix, self.States = empirical_mle_transmatrix(observed_sequence)
+        n = len(self.States)
+        self.TrstCntsVec = Tcount.reshape((-1, 1))                               # To column vector. 
+        C = make_matrix(self.TransitionMatrix, lmbd).todense()
+        self.ConstraintMatrixC = C
+        self.ObjFxn, self.ObjGrad = make_objective_fxngrad(Tcount)
+        self.EqnCon, self.EqnJac = make_eqcon_fxnjac(n)
+        self.IneqCon, self.IneqJac = make_ineqcon_fxnjac(C)
+
         return None
     
     def mirror_transmatrix(self):
@@ -41,12 +73,16 @@ class ProblemModelingSQP:
     def mirror_constraint_matrix(self):
         return self.ConstraintMatrixC
 
-    def mirror_grad_fxn(self):
+    def grad_fxn(self):
+        """
         
-        pass
+        Returns:
+            callable : the objective function as a callable, it's a shallow borrow. 
+        """
+        return self.ObjFxn
     
     def idx2state(self):
-        pass
+        return self.States
 
     def state2idx(self):
         pass
@@ -122,33 +158,31 @@ def empirical_mle_transmatrix(observed):
 
 
 
-def make_objective_fxngrad(ncounts):
+def make_objective_fxngrad(tcounts):
     """
     ### Description: 
 
     This function prepare callable functions that are the objective function and the gradient of the objective function for the problem. 
     These callable functions will be used for the SQP interface of scipy. 
-    ---
 
+    ---
     ### parameters
-    ---
-    - mtx: The probability transition matrix estimated via simple MLE. 
     - ncounts: a vector of length n^2 denote the total count of i->j transiiton for states. 
-
-    ### returns : (objfxn:Callable, objfxngrad:Callable)
     ---
+    ### returns : (objfxn:Callable, objfxngrad:Callable)
     - objfxn: A callable function that takes in a numpy array of length: n^2 + Combinatorics(n^2, 2). 
         It returns the objective value of the function. 
     - objfxngrad: A callable function that takes in a numpy array of length: n^2 + Combinatorics(n^2, 2)
         It returns the gradient of the objective function. 
     """
-    n = len(ncounts)
+    n = tcounts
+    # TODO: Add Expected Length checks here. 
     def ObjectiveMake(x): 
         # x here is literally the transition matrix (in vector form) we are trying to optimize. 
         # This function should get called by scipy.optimize internal code! 
         p = x[0:n**2]
         u = x[n**2 + 1:]
-        prd = -np.log(p.reshape((-1,))*ncounts.reshape((-1,)))
+        prd = -np.log(p.reshape((-1,))*tcounts.reshape((-1,)))
         return prd + np.sum(u)
         
 
@@ -157,7 +191,7 @@ def make_objective_fxngrad(ncounts):
         # This function should get called by scipy.optimize internal code! 
         p = x[0:n**2]
         u = x[n**2 + 1:]
-        return np.vcat(ncounts/p, np.ones_like(u))
+        return np.vcat(tcounts/p, np.ones_like(u))
         
     return ObjectiveMake, ObjectiveGrad
 
@@ -165,10 +199,23 @@ def make_objective_fxngrad(ncounts):
 
 def make_eqcon_fxnjac(n:int):
     """
-    returns : (:Callable, :Callable)
-    """
+    Make the equality constraints function and the Jacobi of the equality constraints function. 
+    
+    ---
+    ### returns : (:Callable, :Callable)
 
-    pass
+
+    """
+    C = np.kron(np.eye(n), np.ones(n))
+
+    def Obj(x):
+        assert len(x) == n
+        return C@x
+    
+    def Jacb(x):
+        assert len(x) == n
+        return C
+    return Obj, Jacb
 
 
 
@@ -176,15 +223,29 @@ def make_ineqcon_fxnjac(conmtx):
     """
     returns : (:Callable, :Callable)
     """
+    m, _ = np.shape(conmtx)
+    rBlock1st = np.hstack((-conmtx, np.eye(m))) # Pass in as tuples! 
+    rBlock2nd = np.hstack((conmtx, np.eye(m)))
+    G = np.vstack((rBlock1st, rBlock2nd))
 
-    pass
+    def Obj(x): 
+        return G@x
+    def jac(x): 
+        return G
+    return Obj, jac
+    
+
+    
 
 
-
-def SQP_solve():
+def SQP_solve(pmb):
+    if not isinstance(pmb, ProblemModelingSQP):
+        raise TypeError(f"The type of pmb should be of {ProblemModelingSQP}, but it's actually {type(pbm)}")
+    
     """
     Given a list of eta_i for the maximal likelihood, and the MLE estimated transition probability matrix P that is n by n, the function formulate the problems for scipy.optimize. 
     """
+
     pass
 
 
@@ -192,7 +253,7 @@ def SQP_solve():
 
 def main(): 
     global TESTSTRING
-    TESTSTRING = "ABCCBA"
+    TESTSTRING = "AABB"
     global pbm
     pbm = ProblemModelingSQP(TESTSTRING)
     return None

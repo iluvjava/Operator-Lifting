@@ -1,0 +1,10 @@
+name: operator_lift
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - scipy
+  - cvxopt
+  - numpy
+  - pyproximal
+prefix: /Users/hongdali/anaconda3/envs/operator_lift
