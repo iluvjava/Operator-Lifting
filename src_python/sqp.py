@@ -2,6 +2,8 @@ import numpy as np
 import sys
 import scipy
 import scipy.sparse
+import scipy.optimize
+
 
 import itertools
 import collections
@@ -25,6 +27,7 @@ class ProblemModelingSQP:
     - States
     - TrstCntsVec
     - ConstraintMatrixC
+    - CRowsCount
     - ObjFxn
     - ObjGrad
     - EqnCon
@@ -53,14 +56,16 @@ class ProblemModelingSQP:
             raise ValueError(f"lmbd passed to __int__ for {type(self)} should be nonegative. ")
         self.lmbd = lmbd
 
-        Tcount, self.TransitionMatrix, self.States = empirical_mle_transmatrix(observed_sequence)
+        transFreqVec, self.TransitionMatrix, self.States = empirical_mle_transmatrix(observed_sequence)
         n = len(self.States)
-        self.TrstCntsVec = Tcount.reshape((-1, 1))                               # To column vector. 
-        C = make_matrix(self.TransitionMatrix, lmbd).todense()
+        self.TransFreqasVec = transFreqVec.reshape(-1)                            # Transition matrix to column vector. 
+        C = make_matrix(self.TransitionMatrix, lmbd).toarray()
         self.ConstraintMatrixC = C
-        self.ObjFxn, self.ObjGrad = make_objective_fxngrad(Tcount)
-        self.EqnCon, self.EqnJac = make_eqcon_fxnjac(n)
+        self.CRowsCount = np.size(C, 0)
+        self.ObjFxn, self.ObjGrad = make_objective_fxngrad(n, self.TransFreqasVec)
+        self.EqnCon, self.EqnJac = make_eqcon_fxnjac(n, self.ConstraintMatrixC)
         self.IneqCon, self.IneqJac = make_ineqcon_fxnjac(C)
+        
 
         return None
     
@@ -158,7 +163,9 @@ def empirical_mle_transmatrix(observed):
 
 
 
-def make_objective_fxngrad(tcounts):
+
+### ================== Optimization Related Implementations =======================
+def make_objective_fxngrad(n, trans_freq_as_vec):
     """
     ### Description: 
 
@@ -167,7 +174,8 @@ def make_objective_fxngrad(tcounts):
 
     ---
     ### parameters
-    - ncounts: a vector of length n^2 denote the total count of i->j transiiton for states. 
+    - n: The number of observed states involved in the problem. 
+    
     ---
     ### returns : (objfxn:Callable, objfxngrad:Callable)
     - objfxn: A callable function that takes in a numpy array of length: n^2 + Combinatorics(n^2, 2). 
@@ -175,15 +183,15 @@ def make_objective_fxngrad(tcounts):
     - objfxngrad: A callable function that takes in a numpy array of length: n^2 + Combinatorics(n^2, 2)
         It returns the gradient of the objective function. 
     """
-    n = tcounts
+    p_hat = trans_freq_as_vec
     # TODO: Add Expected Length checks here. 
     def ObjectiveMake(x): 
         # x here is literally the transition matrix (in vector form) we are trying to optimize. 
         # This function should get called by scipy.optimize internal code! 
         p = x[0:n**2]
         u = x[n**2 + 1:]
-        prd = -np.log(p.reshape((-1,))*tcounts.reshape((-1,)))
-        return prd + np.sum(u)
+        prd = -p_hat*np.log(p)
+        return np.sum(prd) + np.sum(u)
         
 
     def ObjectiveGrad(x):
@@ -191,13 +199,15 @@ def make_objective_fxngrad(tcounts):
         # This function should get called by scipy.optimize internal code! 
         p = x[0:n**2]
         u = x[n**2 + 1:]
-        return np.vcat(tcounts/p, np.ones_like(u))
+        grad = np.hstack((p_hat/p, np.ones_like(u)))
+        
+        return grad
         
     return ObjectiveMake, ObjectiveGrad
 
 
 
-def make_eqcon_fxnjac(n:int):
+def make_eqcon_fxnjac(n:int, conmtx):
     """
     Make the equality constraints function and the Jacobi of the equality constraints function. 
     
@@ -207,16 +217,14 @@ def make_eqcon_fxnjac(n:int):
 
     """
     C = np.kron(np.eye(n), np.ones(n))
-
+    m = np.size(conmtx, 0) # length of the u decision variables. 
     def Obj(x):
-        assert len(x) == n
-        return C@x
+        return np.dot(C, x[:n**2]) - 1
     
     def Jacb(x):
-        assert len(x) == n
-        return C
+        return np.hstack((C, np.zeros((n, m))))
+    
     return Obj, Jacb
-
 
 
 def make_ineqcon_fxnjac(conmtx):
@@ -229,24 +237,11 @@ def make_ineqcon_fxnjac(conmtx):
     G = np.vstack((rBlock1st, rBlock2nd))
 
     def Obj(x): 
-        return G@x
+        return np.dot(G, x)
     def jac(x): 
         return G
     return Obj, jac
     
-
-    
-
-
-def SQP_solve(pmb):
-    if not isinstance(pmb, ProblemModelingSQP):
-        raise TypeError(f"The type of pmb should be of {ProblemModelingSQP}, but it's actually {type(pbm)}")
-    
-    """
-    Given a list of eta_i for the maximal likelihood, and the MLE estimated transition probability matrix P that is n by n, the function formulate the problems for scipy.optimize. 
-    """
-
-    pass
 
 
 
@@ -255,7 +250,40 @@ def main():
     global TESTSTRING
     TESTSTRING = "AABB"
     global pbm
-    pbm = ProblemModelingSQP(TESTSTRING)
+    pbm = ProblemModelingSQP(TESTSTRING, lmbd=0.5)
+    global ineq_cons
+    # Functional representation for constraints are fine 
+    ineq_cons = {'type': 'ineq',
+        'fun' : pbm.IneqCon,
+        'jac' : pbm.IneqJac
+        }
+    global eq_cons
+    eq_cons = {'type': 'eq',
+            'fun' : pbm.EqnCon,
+            'jac' : pbm.EqnJac
+            }
+    l = pbm.CRowsCount + len(pbm.TransFreqasVec)
+    global bounds
+    bounds = scipy.optimize.Bounds(
+        np.zeros(l), np.full(l, np.inf)
+    )
+    # the objective function and gradient 
+    objfxn = pbm.ObjFxn
+    objgrad = pbm.ObjGrad
+    # initial Guess 
+    global x0
+    C = pbm.ConstraintMatrixC
+    x0 = np.eye(len(pbm.States)).reshape(-1)
+    x0 = np.hstack((x0, np.dot(C, x0)))
+
+    global res 
+    res = scipy.optimize.minimize(
+        objfxn, x0, method='SLSQP', jac=objgrad,
+        constraints=[eq_cons, ineq_cons], 
+        options={'ftol': 1e-9, 'disp': True},
+        bounds=bounds
+        )
+    
     return None
 
 

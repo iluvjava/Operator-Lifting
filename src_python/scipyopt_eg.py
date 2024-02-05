@@ -30,14 +30,24 @@ def main():
     global ineq_cons
     # Functional representation for constraints are fine 
     ineq_cons = {'type': 'ineq',
-        'fun' : lambda x: 
-            np.array([1 - x[0] - 2*x[1], 1 - x[0]**2 - x[1], 1 - x[0]**2 + x[1]]),
+        'fun' : lambda x: # This is a 1D array! 
+            np.array(
+                [
+                    1 - x[0] - 2*x[1], 
+                    1 - x[0]**2 - x[1],
+                    1 - x[0]**2 + x[1]
+                ]),
         'jac' : lambda x: 
-            np.array([[-1.0, -2.0], [-2*x[0], -1.0], [-2*x[0], 1.0]])
+            np.array(
+                [
+                [-1.0, -2.0], 
+                [-2*x[0], -1.0], 
+                [-2*x[0], 1.0]]
+                )
         }
     global eq_cons
     eq_cons = {'type': 'eq',
-            'fun' : lambda x: np.array([2*x[0] + x[1] - 1]),
+            'fun' : lambda x: np.array([2*x[0] + x[1] - 1]), # This is a 1D array! 
             'jac' : lambda x: np.array([2.0, 1.0])}
     bounds = Bounds([0, -0.5], [1.0, 2.0])
     x0 = np.array([0.5, 0])
