@@ -1,8 +1,10 @@
 import numpy as np
+import numpy.linalg
 import sys
 import scipy
 import scipy.sparse
 import scipy.optimize
+
 
 
 import itertools
@@ -117,7 +119,8 @@ def make_matrix(CoeffMtx, regl=1.0):
     for k, (i, j) in enumerate(itertools.combinations(range(n**2), 2)): 
         if C[i] - C[j] == 0: 
             # still tells the sparse matrix parser that there is a zero row there. 
-            row.append(k); col.append(0); data.append(0)
+            row.append(k); col.append(i); data.append(0)
+            row.append(k); col.append(j); data.append(0)
         else:
             row.append(k); col.append(i); data.append(regl/abs(C[i] - C[j]))
             row.append(k); col.append(j); data.append(-regl/abs(C[i] - C[j]))
@@ -184,23 +187,61 @@ def make_objective_fxngrad(n, trans_freq_as_vec):
         It returns the gradient of the objective function. 
     """
     p_hat = trans_freq_as_vec
+
+    # helps computing x1*log(x2), handles things like 0*log(0) = 0
+    valueErrorMessage = """
+        View source code please. 
+        The error is hard to describe. 
+        we expect some conditiosn and it didn't happen.
+    """
+    def LogProdHelper(x1, x2): 
+        if (not x1 == 0) and (x2 == 0):
+            raise ValueError(valueErrorMessage)
+        # Remaining cases: 
+        # - x1 != 0 and x2 != 0
+        # - x1 == 0 and x2 == 0 
+        # - x1 == 0 and x2 != 0
+        if x1 == 0 and x2 == 0: 
+            return 0
+        return x1*np.log(x2)
+        
+    # helps computing derivative of x1*log(x2) wrt x2. 
+    def GradDivHelper(x1, x2): 
+        if (not x1 == 0) and (x2 == 0):
+            raise ValueError(valueErrorMessage)
+        if x1 == 0 and x2 == 0:
+            return 0
+        return x1/x2
+        
     # TODO: Add Expected Length checks here. 
+    
     def ObjectiveMake(x): 
         # x here is literally the transition matrix (in vector form) we are trying to optimize. 
         # This function should get called by scipy.optimize internal code! 
         p = x[0:n**2]
         u = x[n**2 + 1:]
-        prd = -p_hat*np.log(p)
-        return np.sum(prd) + np.sum(u)
+        objFxnVal = np.sum(
+            np.array(
+                    list(map(LogProdHelper, p_hat, p))
+                )
+            ) + np.sum(u)
+        print(f"Objective Fxn Value = {objFxnVal}")
+        return objFxnVal
         
-
     def ObjectiveGrad(x):
         # x here is literally the transition matrix (in vector form) we are trying to optimize. 
         # This function should get called by scipy.optimize internal code! 
         p = x[0:n**2]
         u = x[n**2 + 1:]
-        grad = np.hstack((p_hat/p, np.ones_like(u)))
-        
+        grad = np.hstack(
+                (
+                    np.array(
+                    list(map(GradDivHelper, p, p_hat))
+                    ),
+                    np.ones_like(u)
+                )
+            )
+        print(f"Grad Norm = {np.linalg.norm(grad)}")
         return grad
         
     return ObjectiveMake, ObjectiveGrad
@@ -219,10 +260,14 @@ def make_eqcon_fxnjac(n:int, conmtx):
     C = np.kron(np.eye(n), np.ones(n))
     m = np.size(conmtx, 0) # length of the u decision variables. 
     def Obj(x):
-        return np.dot(C, x[:n**2]) - 1
+        result = np.dot(C, x[:n**2]) - 1
+        print(f"Eqn con Eval = {result}")
+        return result
     
     def Jacb(x):
-        return np.hstack((C, np.zeros((n, m))))
+        result = np.hstack((C, np.zeros((n, m))))
+        print(f"Eqn Jac Eval: \n {result}")
+        return result
     
     return Obj, Jacb
 
@@ -237,9 +282,14 @@ def make_ineqcon_fxnjac(conmtx):
     G = np.vstack((rBlock1st, rBlock2nd))
 
     def Obj(x): 
-        return np.dot(G, x)
+        result = np.dot(G, x)
+        print(f"Ineq Val Eval {result}")
+        return result
+    
     def jac(x): 
+        print(f"Ineq Jac Eval:\n {G}")
         return G
+    
     return Obj, jac
     
 
@@ -248,20 +298,20 @@ def make_ineqcon_fxnjac(conmtx):
 
 def main(): 
     global TESTSTRING
-    TESTSTRING = "AABB"
+    TESTSTRING = "AABBAA"
     global pbm
     pbm = ProblemModelingSQP(TESTSTRING, lmbd=0.5)
     global ineq_cons
     # Functional representation for constraints are fine 
     ineq_cons = {'type': 'ineq',
-        'fun' : pbm.IneqCon,
-        'jac' : pbm.IneqJac
+            'fun' : pbm.IneqCon,
+            'jac' : pbm.IneqJac
         }
     global eq_cons
     eq_cons = {'type': 'eq',
             'fun' : pbm.EqnCon,
             'jac' : pbm.EqnJac
-            }
+        }
     l = pbm.CRowsCount + len(pbm.TransFreqasVec)
     global bounds
     bounds = scipy.optimize.Bounds(
@@ -273,7 +323,7 @@ def main():
     # initial Guess 
     global x0
     C = pbm.ConstraintMatrixC
-    x0 = np.eye(len(pbm.States)).reshape(-1)
+    x0 = pbm.TransitionMatrix.reshape(-1)
     x0 = np.hstack((x0, np.dot(C, x0)))
 
     global res 
