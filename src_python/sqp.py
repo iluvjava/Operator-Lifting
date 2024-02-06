@@ -116,17 +116,17 @@ def make_matrix(CoeffMtx, regl=1.0):
     row, col, data = [], [], []
     C = CoeffMtx.reshape((-1,)) # flatten the coefficient matrix into a vector. 
     for k, (i, j) in enumerate(itertools.combinations(range(n**2), 2)): 
-        # if C[i] - C[j] == 0: 
-        #     # still tells the sparse matrix parser that there is a zero row there. 
-        #     row.append(k); col.append(i); data.append(0)
-        #     row.append(k); col.append(j); data.append(0)
-        # else:
-        #     row.append(k); col.append(i); data.append(regl/abs(C[i] - C[j]))
-        #     row.append(k); col.append(j); data.append(-regl/abs(C[i] - C[j]))
+        if C[i] - C[j] == 0: 
+            # still tells the sparse matrix parser that there is a zero row there. 
+            row.append(k); col.append(i); data.append(0)
+            row.append(k); col.append(j); data.append(0)
+        else:
+            row.append(k); col.append(i); data.append(regl/abs(C[i] - C[j]))
+            row.append(k); col.append(j); data.append(-regl/abs(C[i] - C[j]))
         # row.append(k); col.append(i); data.append(regl/(abs(C[i] - C[j]) + 1))
         # row.append(k); col.append(j); data.append(-regl/(abs(C[i] - C[j]) + 1))
-        row.append(k); col.append(i); data.append(regl)
-        row.append(k); col.append(j); data.append(-regl)
+        # row.append(k); col.append(i); data.append(regl)
+        # row.append(k); col.append(j); data.append(-regl)
     return csr_matrix((data, (row, col)), dtype=float)
 
 
