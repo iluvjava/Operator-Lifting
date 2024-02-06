@@ -116,15 +116,15 @@ def make_matrix(CoeffMtx, regl=1.0):
     row, col, data = [], [], []
     C = CoeffMtx.reshape((-1,)) # flatten the coefficient matrix into a vector. 
     for k, (i, j) in enumerate(itertools.combinations(range(n**2), 2)): 
-        # if C[i] - C[j] == 0: 
-        #     # still tells the sparse matrix parser that there is a zero row there. 
-        #     row.append(k); col.append(i); data.append(0)
-        #     row.append(k); col.append(j); data.append(0)
-        # else:
-        #     row.append(k); col.append(i); data.append(regl/abs(C[i] - C[j]))
-        #     row.append(k); col.append(j); data.append(-regl/abs(C[i] - C[j]))
-        row.append(k); col.append(i); data.append(regl/abs(C[i] - C[j] + 1e-8))
-        row.append(k); col.append(j); data.append(-regl/abs(C[i] - C[j] + 1e-8))
+        if C[i] - C[j] == 0: 
+            # still tells the sparse matrix parser that there is a zero row there. 
+            row.append(k); col.append(i); data.append(0)
+            row.append(k); col.append(j); data.append(0)
+        else:
+            row.append(k); col.append(i); data.append(regl/abs(C[i] - C[j]))
+            row.append(k); col.append(j); data.append(-regl/abs(C[i] - C[j]))
+        # row.append(k); col.append(i); data.append(regl/abs(C[i] - C[j] + 1e-8))
+        # row.append(k); col.append(j); data.append(-regl/abs(C[i] - C[j] + 1e-8))
     return csr_matrix((data, (row, col)), dtype=float)
 
 
@@ -203,9 +203,7 @@ def make_objective_fxngrad(n, trans_freq_as_vec):
         # - x1 == 0 and x2 != 0
         if x1 == 0 and x2 == 0: 
             return 0
-        if x2 <= 0: 
-            return np.inf
-        return x1*np.log(abs(x2))
+        return x1*np.log(x2)
         
     # helps computing derivative of x1*log(x2) wrt x2. 
     def GradDivHelper(x1, x2): 
@@ -214,8 +212,7 @@ def make_objective_fxngrad(n, trans_freq_as_vec):
         
         if x1 == 0 and x2 == 0:
             return 0
-        if x2 <= 0: 
-            return np.inf
+        
         return x1/x2
         
     # TODO: Add Expected Length checks here. 
@@ -300,9 +297,9 @@ def sqp():
 
 def main(): 
     global TESTSTRING
-    TESTSTRING = "ABACAABCBABBCC"
+    TESTSTRING = TESTSTRING = "02002102000101000000102002110000021102201100000121101100102200102212002011112010100202020220021011110001020002102020211001102210020111001100000102100022100110201210022100020000101002210202100021000220220211202211110002221011010211000211202201021002102200012201101110222110002022012210202020020102100202211110202001122020000110020222220022110010020002102120002010010000211002021102102121210202221122000110202101020002020022200021000211020211022210200121022200010211002201101110220220110202110202210020212102102120002210002202112110210020001010002002000202102121222022121022201210211202020022100222101102112100221202021001010211020210102110202211200202000000000022102020000021111220012110201121010002002020000120200222022110202011002101002110010002120221100011000002100220222202021110222102200022001101011122021021111120021100010210222100222110202210102002221000021202020210200201101001120002211121011000212002000122022200121011120000210111011111020112221002002202"
     global pbm
-    pbm = ProblemModelingSQP(TESTSTRING, lmbd=0.005)
+    pbm = ProblemModelingSQP(TESTSTRING, lmbd=1)
     n = len(pbm.States)
     global ineq_cons
     # Functional representation of Constraints =================================
@@ -333,8 +330,8 @@ def main():
     res = scipy.optimize.minimize(
             objfxn, x0, method='SLSQP', jac=objgrad,
             constraints=[eq_cons, ineq_cons], 
-            options={'ftol': 1e-14, 'disp': True},
-            bounds=bounds
+            options={'ftol': 1e-14, 'disp': True, 'maxiter': 40},
+            bounds=bounds, 
         )
     print("The best estimate of the solution matrix is:")
     global M
