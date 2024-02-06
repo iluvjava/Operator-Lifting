@@ -5,11 +5,10 @@ import scipy
 import scipy.sparse
 import scipy.optimize
 
-
-
 import itertools
 import collections
 import numbers
+from datetime import datetime
 
 
 
@@ -159,7 +158,7 @@ def empirical_mle_transmatrix(observed):
         for (pre, cur) in zip(ObservedIdx[:-1], ObservedIdx[1:]):
             TransitionCountMatrix[pre, cur] += 1
         # normalize by row sum. 
-        RowCounts = np.sum(TransitionCountMatrix, axis=0).reshape((1, -1))
+        RowCounts = np.sum(TransitionCountMatrix, axis=1).reshape((-1, 1))
         return TransitionCountMatrix, TransitionCountMatrix/RowCounts, ObservedStates
     else:
         raise TypeError("Argument states/observed is not itertable. ")
@@ -187,7 +186,7 @@ def make_objective_fxngrad(n, trans_freq_as_vec):
         It returns the gradient of the objective function. 
     """
     p_hat = trans_freq_as_vec
-
+    NumTol = 1e-10
     # helps computing x1*log(x2), handles things like 0*log(0) = 0
     valueErrorMessage = """
         View source code please. 
@@ -195,7 +194,7 @@ def make_objective_fxngrad(n, trans_freq_as_vec):
         we expect some conditiosn and it didn't happen.
     """
     def LogProdHelper(x1, x2): 
-        if (not x1 == 0) and (x2 == 0):
+        if (not x1 == 0) and (x2 <= -NumTol): # not in domain! 
             raise ValueError(valueErrorMessage)
         # Remaining cases: 
         # - x1 != 0 and x2 != 0
@@ -203,14 +202,19 @@ def make_objective_fxngrad(n, trans_freq_as_vec):
         # - x1 == 0 and x2 != 0
         if x1 == 0 and x2 == 0: 
             return 0
-        return x1*np.log(x2)
+        if x2 <= 0: 
+            return np.inf
+        return x1*np.log(abs(x2))
         
     # helps computing derivative of x1*log(x2) wrt x2. 
     def GradDivHelper(x1, x2): 
-        if (not x1 == 0) and (x2 == 0):
+        if (not x1 == 0) and (x2 <= - NumTol): # not in domain! 
             raise ValueError(valueErrorMessage)
+        
         if x1 == 0 and x2 == 0:
             return 0
+        if x2 <= 0: 
+            return np.inf
         return x1/x2
         
     # TODO: Add Expected Length checks here. 
@@ -219,29 +223,29 @@ def make_objective_fxngrad(n, trans_freq_as_vec):
         # x here is literally the transition matrix (in vector form) we are trying to optimize. 
         # This function should get called by scipy.optimize internal code! 
         p = x[0:n**2]
-        u = x[n**2 + 1:]
+        u = x[n**2:]
         objFxnVal = np.sum(
-            np.array(
+            - np.array(
                     list(map(LogProdHelper, p_hat, p))
                 )
             ) + np.sum(u)
-        print(f"Objective Fxn Value = {objFxnVal}")
+        print(f"[{datetime.utcnow().strftime('%F %T.%f')[:-3]}] Objective Fxn Value = {objFxnVal}")
+
         return objFxnVal
         
     def ObjectiveGrad(x):
         # x here is literally the transition matrix (in vector form) we are trying to optimize. 
         # This function should get called by scipy.optimize internal code! 
         p = x[0:n**2]
-        u = x[n**2 + 1:]
+        u = x[n**2:]
         grad = np.hstack(
                 (
-                    np.array(
-                    list(map(GradDivHelper, p, p_hat))
+                    - np.array(
+                        list(map(GradDivHelper, p, p_hat))
                     ),
                     np.ones_like(u)
                 )
             )
-        print(f"Grad Norm = {np.linalg.norm(grad)}")
         return grad
         
     return ObjectiveMake, ObjectiveGrad
@@ -261,12 +265,10 @@ def make_eqcon_fxnjac(n:int, conmtx):
     m = np.size(conmtx, 0) # length of the u decision variables. 
     def Obj(x):
         result = np.dot(C, x[:n**2]) - 1
-        print(f"Eqn con Eval = {result}")
         return result
     
     def Jacb(x):
         result = np.hstack((C, np.zeros((n, m))))
-        print(f"Eqn Jac Eval: \n {result}")
         return result
     
     return Obj, Jacb
@@ -283,26 +285,26 @@ def make_ineqcon_fxnjac(conmtx):
 
     def Obj(x): 
         result = np.dot(G, x)
-        print(f"Ineq Val Eval {result}")
         return result
     
     def jac(x): 
-        print(f"Ineq Jac Eval:\n {G}")
         return G
     
     return Obj, jac
     
 
-
+def sqp():
+    pass
 
 
 def main(): 
     global TESTSTRING
-    TESTSTRING = "AABBAA"
+    TESTSTRING = "ABACAABCBABBCC"
     global pbm
-    pbm = ProblemModelingSQP(TESTSTRING, lmbd=0.5)
+    pbm = ProblemModelingSQP(TESTSTRING, lmbd=0.005)
+    n = len(pbm.States)
     global ineq_cons
-    # Functional representation for constraints are fine 
+    # Functional representation of Constraints =================================
     ineq_cons = {'type': 'ineq',
             'fun' : pbm.IneqCon,
             'jac' : pbm.IneqJac
@@ -315,26 +317,29 @@ def main():
     l = pbm.CRowsCount + len(pbm.TransFreqasVec)
     global bounds
     bounds = scipy.optimize.Bounds(
-        np.zeros(l), np.full(l, np.inf)
+        np.zeros(l) + 1e-10, np.full(l, np.inf)
     )
-    # the objective function and gradient 
+    # the objective function and gradient ======================================
     objfxn = pbm.ObjFxn
     objgrad = pbm.ObjGrad
     # initial Guess 
     global x0
     C = pbm.ConstraintMatrixC
     x0 = pbm.TransitionMatrix.reshape(-1)
-    x0 = np.hstack((x0, np.dot(C, x0)))
+    x0 = np.hstack((x0, np.dot(C, x0) + 1)).copy()
 
     global res 
     res = scipy.optimize.minimize(
-        objfxn, x0, method='SLSQP', jac=objgrad,
-        constraints=[eq_cons, ineq_cons], 
-        options={'ftol': 1e-9, 'disp': True},
-        bounds=bounds
+            objfxn, x0, method='SLSQP', jac=objgrad,
+            constraints=[eq_cons, ineq_cons], 
+            options={'ftol': 1e-14, 'disp': True},
+            bounds=bounds
         )
-    
-    return None
+    print("The best estimate of the solution matrix is:")
+    global M
+    M = res.x[:n**2].reshape((n, n))
+    print(M)
+    return M
 
 
 if __name__ == "__main__":
