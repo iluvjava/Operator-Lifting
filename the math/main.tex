@@ -97,6 +97,8 @@
         \item [1.] $n\in \mathbb N$. It denotes the numer of states for a Markov Chain. 
         \item [2.] $p\in \mathbb R^{n\times n}$ denotes the probability transition matrix. It's in small case because it's also the variable for the optimization problem. It supports two types of indexing, $p_{i,j}$ for $i, j \in \{1, \cdots, n\}$, or $p_j$ with $j\in \{1, \cdots, n^2\}$. More on this later. 
         \item [3.] $\eta_{ij} \ge 0$ for $i, j \in \{1, \cdots, n\}$ is a parameter of the problem. 
+        It also supports indexing with a 2D indices of type $(i, j)\in \{1, \cdots, n\}\times \{1, \cdots, n\}$ as if it were a matrix. 
+        Or indexing by $\eta_{i}$ for $i \in \{1, \cdots, n\}$ as if it were a matrix flattened into a vector. 
         \item [4.] $\hat p$ is the empirically measured probability transition matrix. They are the maximal likelihood estimators for the transition probability in the transition probability matrix. 
         \item [5.] $\lambda$ is the regularization parameter. 
         \item [6.] $\mathbf C^m_n$ is the combinatoric term that counts all possible subset of size $n, n<m$ from a super set of size $m$. 
@@ -149,13 +151,62 @@
         It's defined as $\Delta_n = \{x\in \mathbb R^n_+ : \sum_{i =1}^{n}x_n = 1\}$. 
         For simplicity we just denote using notation $\Delta_{n\times n} = \Delta_n\oplus\Delta_n\oplus \cdots \oplus \Delta_n$. 
     
-    \subsection{Analyzing the Objective Functions}
+    \subsection{Analyzing the Smooth Part of the Objective Function}\label{sec:analyzing_smooth}
         The formulated problem presents challenges. 
+        Let's focus on the smooth part of the objective function. 
+        Let's denote $f = \sum_{i = 1}^{n^2} - \eta_{i}\log(p_i)$. 
         When $\eta_{i, j} = 0$ for some integer $1<  i < j <n$, the domain of the objective function is not closed due to the term $-\eta_{ij} \log(p_{i, j})$. 
         Here, we define that $0 \log 0 = 0$, as a deliberate choice. 
-        Since the function is a direct sum of $\eta_{ij}\log(p_{i, j})$, we consider the domain of the function 
+        \begin{claim}[Domain of the smooth Part is not Closed]
+            Since the function is a sum of $\eta_{ij}\log(p_{i, j})$, we consider the domain of the function to be
+            \begin{align*}
+                \text{dom} f
+                &= 
+                \bigoplus_{i = 1}^{n^2}
+                \left.
+                \begin{cases}
+                    \mathbb R_+  & \eta_{i} > 0
+                    \\
+                    \mathbb R_{++} & \eta_{i} = 0
+                \end{cases}
+                \right\rbrace. 
+            \end{align*}
+            Observe that if there are values of $\eta_{i, j} = 0$, the set $\text{dom}(f)$ is not a closed set! 
+        \end{claim}
+        \begin{remark}
+            Adding the transition probability matrix constraint $\Delta_{n\times n}$, giving us $f(x)  + \delta\{\Delta_{n\times n}\}(x)$, and the domain of the function is still not a closed set. 
+        \end{remark}
+        Similarly, the gradient of the function is the product of the derivative of different functions as well.         
+        It can be computed by 
         \begin{align*}
+            \nabla f(p) &= 
+            \bigoplus_{i = 1}^{n^2}
+            [-\eta_{i}\log(\cdot)]'(p_i) \quad \forall p \in \text{dom} f
+            \\
+            &= 
+            \bigoplus_{i = 1}^{n^2} 
+            \left.
+                \begin{cases}
+                    - \eta_{i} / p_i & \eta_{i} \neq 0 
+                    \\
+                    0 & \text{else}
+                \end{cases}
+            \right\rbrace 
+            \quad \forall p \in \text{dom} f. 
         \end{align*}
+        Therefore the domain of $\nabla f = \mathbb R^{n^2}_{++}$. 
+        It is the strictly positive quadrant of $\mathbb R^{n^2}$. 
+        \begin{remark}
+            When there exists some $\eta_{i} = 0$, wehave 
+            \begin{itemize}
+                \item [1.] The gradient $\nabla f$ is not a globally Lipschitz Mapping. 
+                \item [2.] And the $\nabla^2 f$ can be a singular Hessian, and its eigenvalues are also not bounded. 
+                \item [3.] The function is not strictly convex in the direction $\vec{\mathbf{e}}_i$ as well. 
+            \end{itemize}
+        \end{remark}
+    \subsection{Analyzing the Probability Transition Matrix Constraints}
+    
+    
 
 
 \section{Modeling}
@@ -408,7 +459,7 @@
         The programmer is required to provide 
         \begin{itemize}
             \item[1.] $\nabla f(x)$, the gradient of the objective and the objective function in the form of a function handle in python. 
-            \item[2.] 
+            \item[2.] The gradient and function of the equality and the inequality constraint of the problem. 
         \end{itemize}
         
         Representing the sequence of constraints $c_j(x)$ for $J \in \Upsilon$ as a vector function $C(x)$. 
@@ -446,22 +497,7 @@
         Observe that, $\mathcal C$ is a $2 \mathbf C_2^{n^2}$ by $2n + \mathbf C_2^{n^2}$ matrix. 
         $\mathcal G$ is a $n\times n^2$ matrix. 
         The matrix $\mathcal C, \mathcal G$ denoted above are the Jacobi of the inequality and equality constraints respectively. 
-        Finally, the gradient of the objective function would be a vector with dimension $n^2 + \mathbf C_2^{n^2}$. 
-        \newcommand{\elew}[1]{\;\textbf{#1}}
-        Denote $\div$, to indicate that this is an operator that does element-wise division.
-        For example, in below, we have $-\eta\div p$ , which means dividing each element of the vector $\mu$ by element of the vector $p$, resulting in an element of the same dimension. 
-        \begin{align}
-            \nabla \left[
-                \sum_{i = 1}^{n^2} - \eta_{i} \log(p_i)
-                + 
-                \sum_{i = 1}^{\mathbf C_2^{n^2}} u_k
-            \right]&= 
-            \begin{bmatrix}
-                -\eta \div p
-                \\
-                \mathbf 1_{\mathbf C_2^{n^2}}
-            \end{bmatrix}. 
-        \end{align}
+        The gradient of the objective is sated back in \hyperref[sec:analyzing_smooth]{section \ref*{sec:analyzing_smooth}}. 
         At this point, we have everything ready for coding it up in python. 
         
 
