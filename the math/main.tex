@@ -3,6 +3,7 @@
 \usepackage{amsfonts} 
 \usepackage[english]{babel}
 \usepackage{amsthm}
+\usepackage{bbm}
 \usepackage{mathtools}
 \usepackage{subcaption}
 \usepackage{hyperref}
@@ -126,25 +127,29 @@
                 \sum_{i = 1}^{n}\sum_{j = 1}^{n}
                     -\eta_{ij}\log(p_{i, j})
                 + 
-                \lambda \sum_{i=1}^{n^2}\sum_{\substack{j=1\\j\neq i}}^{n^2}
-                \frac{1}{2}
-                \frac{|p_{i} - p_j|}{|\hat p_{i} - \hat p_j|}
-                \right\rbrace
-                \\
-                &\text{ s.t: }
-                \left\lbrace
+                \lambda\sum_{i=1}^{n^2} \sum_{
+                    \substack{j > i \\ p_j \neq p_i}
+                }^{n^2}
+                    \frac{|p_{i} - p_j|}{|\hat p_{i} - \hat p_j|}
+            \right\rbrace
+            \\
+            &\text{ s.t: }
+            \left\lbrace
                 \begin{aligned}
                     \sum_{i = 1}^{n} p_{i, j} &= 1 \; && \forall i =1, \cdots, n 
                     \\
                     p_{i, j} &\ge 0\; &&\forall i= 1,\cdots, n, j = 1,\cdots, n 
                 \end{aligned}
-                \right\rbrace
+            \right\rbrace
             \label{eqn:original_formulaion}
         \end{align}
-        There are 3 parts to the optimization problem posed above. 
-        It has a smooth differentiable function, the sume of $\eta_{ij}\log(p_{i,j})$ but its gradient is not Lipschitz. 
-        The ias a non-smooth part with $p_i - p_j$ for all indices $1,\cdots, n^2$ and $i\neq j$. 
-        If $\hat p_i - \hat p_j = 0$, then we would ignore the term. 
+        There are three parts to the optimization problem posed above. 
+        \begin{itemize}
+            \item [1.] It has a smooth differentiable function, the sume of $\eta_{ij}\log(p_{i,j})$ but its gradient is not Lipschitz. 
+            \item [2.] There is a non-smooth part with $p_i - p_j$ for all indices $1,\cdots, n^2$ and $i\neq j$. 
+            \item [3.] There is a polytoptic constraint set
+        \end{itemize}
+        If $\hat p_i - \hat p_j = 0$, it is ignored in the sum of the non-smooth part. 
         Finally, it has a linear constraints on all $n^2$ variables. 
         $p\in \mathbb R^{n^2}$ is a vector with the structure $\Delta_n\oplus\Delta_n\oplus \cdots \oplus \Delta_n$. 
         Each $\Delta_n$ is a probability simplex. 
@@ -194,7 +199,7 @@
             \right\rbrace 
             \quad \forall p \in \text{dom} f. 
         \end{align*}
-        Therefore the domain of $\nabla f = \mathbb R^{n^2}_{++}$. 
+        Therefore the domain of $\nabla f = \mathbb R^{n^2}_{++}$ because it's the intersection of the domain $\text{dom}f$ with the above expression we derived for the gradient of the function. 
         It is the strictly positive quadrant of $\mathbb R^{n^2}$. 
         \begin{remark}
             When there exists some $\eta_{i} = 0$, wehave 
@@ -205,14 +210,15 @@
             \end{itemize}
         \end{remark}
     \subsection{Analyzing the Probability Transition Matrix Constraints}
-    
+        In this section we provide a more detailed description of the trasition probability matrix constraint by incorperating it with the smooth part of the objective function. 
+    \subsection{Existence of a Minimizer}
+        The function is a coersive function due to the non-smooth part. The function is also l.s.c. Therefore by the key minimizer existence theorem it has a minimizer. 
     
 
 
-\section{Modeling}
-    
+\section{Modeling}  
     The non-smooth part with the absolute value requires some amount of creativity if we were to use common optimization algorithms. 
-    \subsection{Representation of the Non-smooth Part}\label{sec:opsplit_model}
+    \subsection{1-Norm Linear Compositive representation for the Non-smooth Part}\label{sec:opsplit_model}
         \begin{claim}
             The nonsmooth objective can be model as 
             \begin{align*}
