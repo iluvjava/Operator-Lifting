@@ -148,6 +148,16 @@
         Each $\Delta_n$ is a probability simplex. 
         It's defined as $\Delta_n = \{x\in \mathbb R^n_+ : \sum_{i =1}^{n}x_n = 1\}$. 
         For simplicity we just denote using notation $\Delta_{n\times n} = \Delta_n\oplus\Delta_n\oplus \cdots \oplus \Delta_n$. 
+    
+    \subsection{Analyzing the Objective Functions}
+        The formulated problem presents challenges. 
+        When $\eta_{i, j} = 0$ for some integer $1<  i < j <n$, the domain of the objective function is not closed due to the term $-\eta_{ij} \log(p_{i, j})$. 
+        Here, we define that $0 \log 0 = 0$, as a deliberate choice. 
+        Since the function is a direct sum of $\eta_{ij}\log(p_{i, j})$, we consider the domain of the function 
+        \begin{align*}
+            
+        \end{align*}
+
 
 \section{Modeling}
     
