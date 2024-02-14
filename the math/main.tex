@@ -357,6 +357,32 @@
         The matrix $A$ is a $(\mathbf C^{n^2}_2 + n^2) \times (3n^2)$ matrix. 
         It's still a sparse matrix. 
         The matrix would have to be encoded carefully by translating copies of the same matrix to 3 different locations. 
+    \subsection*{Modeling it for Chambolle Pock}
+        The method of Chmabolle Pock has better convergence theory. 
+        It also comes with an acceleration scheme when certain conditions for the objective function applies. 
+        We refer readers to Chambolle and Pock's paper \cite{chambolle_first-order_2010} for more information about the algorithm. 
+        For the modeling purpose in this section, it's sufficient to understand the the Chambolle Pock algorithm solves the set-valued equation $\mathbf 0 \in \partial f (x)+ \partial g(Lx)$ where $f, g$ are convex proper and closed function and $\text{ri.dom}f \cap \text{ri.dom}g \neq \emptyset$. 
+        And $L$ is a bounded linear operators. 
+        In our case, the solution of the above equation yield the minimizers of the objective $f(x) + g(Lx)$. 
+        We claim that our problem can be put into the same format that is accepted by the Chambolle Pock algorithm. 
+        Consider defining the following quantities 
+        \begin{enumerate}
+            \item [1.] Let $\phi(z)$ be a function mapping from $\mathbb R^{n^2}\oplus \mathbb R^{\mathbf C_2^{n^2}}$ such that the vector $z$ admits representation $[x \; y]^T$ where $x \in \mathbb R^{n^2}$ and $y \in \mathbb R^{\mathbf C_2^{n^2}}$. Thsi function handles the smooth and nonsmooth objective given as 
+            $$
+                \phi(z) = f(x) + \Vert y\Vert_1. 
+            $$
+            \item [2.] Define 
+            $$
+                L= 
+                \begin{bmatrix}
+                    I & \mathbf 0 \\
+                    A & - I
+                \end{bmatrix}
+            $$
+            \item [3.] Let $\Phi(z) = \delta\{\Delta_{n\times n}\}(x) + \delta\{\mathbf 0\}(y)$. $\Phi$
+        \end{enumerate}
+
+
     \subsection{Another Method that is not Cursed by the Dimension}
         ...
 
