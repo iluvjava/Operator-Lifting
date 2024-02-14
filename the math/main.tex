@@ -211,8 +211,19 @@
         \end{remark}
     \subsection{Analyzing the Probability Transition Matrix Constraints}
         In this section we provide a more detailed description of the trasition probability matrix constraint by incorperating it with the smooth part of the objective function. 
+
     \subsection{Existence of a Minimizer}
-        The function is a coersive function due to the non-smooth part. The function is also l.s.c. Therefore by the key minimizer existence theorem it has a minimizer. 
+        The funciton may not be coersive. 
+        The smooth part has singular Hessian. 
+        The matrix inside of the one norm may be singular.  
+        Whether it is singular or not, it depends on the parameters of the problem. 
+        In the case where $\hat p_i$ are all the same for $i = 1, \cdots, n^2$, we have $\mathbf 1$ in the null space of matrix $C$ because rows of matrix $C$ are composed by row vector of form $e_i - e_j$. 
+        \textcolor{red}{Are there gonna be minimizers in this case?}
+        When $A$ has full row rank, the non-smooth term of the objective function will be coersive. 
+        Since the summed objective is a lower semi-continuous function, there exist minimizers in this case. 
+        \textcolor{red}{Is the minimier unique in this case? }
+        Additinally, if all $\eta_{i, j}\neq 0$, then the smooth part of the objective function is a strictly convex function. 
+        It will have a unique minimizer in this case. 
     
 
 
@@ -302,11 +313,19 @@
         \begin{remark}
             To formulate into a linear programming with some relaxations, consider that the non-linear objective $-\eta_{ij}\log(p_{i,j})$ can be discretized. 
         \end{remark}
-    \subsection{Modeling it for Operator Splitting}
-        Operator splitting method aims for objective function of the type $f + g$ where $f, g$ are both convex function and they are proximal friendly. 
-        And $\text{ri.dom}(f)\cap \text{ri.dom}(g) \neq \emptyset$. 
+    
+    \subsection{A Quick Tour into Operator Splitting Method}
+        Operator splitting method is relatively new and doesn't have a mature toolings in conventional software yet. 
+        Some julia implementation for splitting method exists. 
+        These type of method requires the use of the Proximal Mapping, which can be non-trivial to implement for even simple functions. 
+        We refer readers to \cite[section 2.7]{ryu_large-scale_2022} of Ryu's Textbook for more information on the Douglas Rachford method. 
+
+
+    \subsection{Modeling it for Douglas Rachford}
+        The Douglas Rachford algorithms solves objective function of the type $f + g$ where $f, g$ are both convex function and they are proximal friendly. 
+        It has the assumption $\text{ri.dom}(f)\cap \text{ri.dom}(g) \neq \emptyset$. 
         Recall that proximal operator of function $f$ is the resolvent operator on the subgradient $(I + \partial f)^{-1}$. 
-        Subgradient is just a generalize type of gradient that can handle continuous function that is not necessarily differentiable. 
+        Subgradient is a generalize type of gradient that can handle continuous function that is not necessarily differentiable. 
         To model the original formulation in such a form, we introduce these quantities: 
         \begin{itemize}
             \item [1.] $f_1(x_1): \mathbb R^{n^2}\mapsto \mathbb R := \sum_{i = 1}^{n^2}-\eta_{i, j}(\log(p_{i, j}))$
@@ -340,10 +359,7 @@
         The matrix would have to be encoded carefully by translating copies of the same matrix to 3 different locations. 
     \subsection{Another Method that is not Cursed by the Dimension}
         ...
-    \subsection{A Quick Tour into Operator Splitting Method}
-        Operator splitting method is relatively new and doesn't have a mature toolings in software. 
-        Using the method requires the use of the Proximal Mapping, which can be non-trivial to implement for even simple functions. 
-        Read section \cite[section 2.7]{ryu_large-scale_2022} of Ryu's Textbook for more information about the algorithm and operator splitting in general. 
+
         
         
 \section{Implementation, Software, and Toolings}
