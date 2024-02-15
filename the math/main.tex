@@ -218,7 +218,7 @@
         The matrix inside of the one norm may be singular.  
         Whether it is singular or not, it depends on the parameters of the problem. 
         In the case where $\hat p_i$ are all the same for $i = 1, \cdots, n^2$, we have $\mathbf 1$ in the null space of matrix $C$ because rows of matrix $C$ are composed by row vector of form $e_i - e_j$. 
-        \textcolor{red}{Are there gonna be minimizers in this case?}
+        \textcolor{red}{Are there minimizers in this case?}
         When $A$ has full row rank, the non-smooth term of the objective function will be coersive. 
         Since the summed objective is a lower semi-continuous function, there exist minimizers in this case. 
         \textcolor{red}{Is the minimier unique in this case? }
@@ -367,7 +367,8 @@
         We claim that our problem can be put into the same format that is accepted by the Chambolle Pock algorithm. 
         Consider defining the following quantities 
         \begin{enumerate}
-            \item [1.] Let $\phi(z)$ be a function mapping from $\mathbb R^{n^2}\oplus \mathbb R^{\mathbf C_2^{n^2}}$ such that the vector $z$ admits representation $[x \; y]^T$ where $x \in \mathbb R^{n^2}$ and $y \in \mathbb R^{\mathbf C_2^{n^2}}$. Thsi function handles the smooth and nonsmooth objective given as 
+            \item [1.] Let $\phi(z)$ be a function mapping from $\mathbb R^{n^2}\oplus \mathbb R^{\mathbf C_2^{n^2}}$ such that the vector $z$ admits representation $[x \; y]^T$ where $x \in \mathbb R^{n^2}$ and $y \in \mathbb R^{\mathbf C_2^{n^2}}$. 
+            This function handles the smooth and nonsmooth objective given as 
             $$
                 \phi(z) = f(x) + \Vert y\Vert_1. 
             $$
@@ -379,12 +380,14 @@
                     A & - I
                 \end{bmatrix}
             $$
-            \item [3.] Let $\Phi(z) = \delta\{\Delta_{n\times n}\}(x) + \delta\{\mathbf 0\}(y)$. $\Phi$
+            \item [3.] 
+            Let $\Phi(z) = \delta\{\Delta_{n\times n}\}(x) + \delta\{\mathbf 0\}(y)$. 
+
         \end{enumerate}
 
 
     \subsection{Another Method that is not Cursed by the Dimension}
-        ...
+        
 
         
         
