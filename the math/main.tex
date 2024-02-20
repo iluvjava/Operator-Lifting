@@ -367,10 +367,10 @@
         We claim that our problem can be put into the same format that is accepted by the Chambolle Pock algorithm. 
         Consider defining the following quantities 
         \begin{enumerate}
-            \item [1.] Let $\phi(z)$ be a function mapping from $\mathbb R^{n^2}\oplus \mathbb R^{\mathbf C_2^{n^2}}$ such that the vector $z$ admits representation $[x \; y]^T$ where $x \in \mathbb R^{n^2}$ and $y \in \mathbb R^{\mathbf C_2^{n^2}}$. 
+            \item [1.] Let $\varphi(z)$ be a function mapping from $\mathbb R^{n^2}\oplus \mathbb R^{\mathbf C_2^{n^2}}$ such that the vector $z$ admits representation $z = [x \; y]^T$ where $x \in \mathbb R^{n^2}$ and $y \in \mathbb R^{\mathbf C_2^{n^2}}$. 
             This function handles the smooth and nonsmooth objective given as 
             $$
-                \phi(z) = f(x) + \Vert y\Vert_1. 
+                \varphi(z) = f(x) + \Vert y\Vert_1. 
             $$
             \item [2.] Define 
             $$
@@ -381,9 +381,13 @@
                 \end{bmatrix}
             $$
             \item [3.] 
-            Let $\Phi(z) = \delta\{\Delta_{n\times n}\}(x) + \delta\{\mathbf 0\}(y)$. 
-
+            Let $\phi(z) = \delta\{\Delta_{n\times n}\}(x) + \delta\{\mathbf 0\}(y)$. 
+            Observe that $\phi(L z) = \delta \{\Delta_{n\times n}\}(x) + \delta\{\mathbf 0\}(Ax - y)$.  
         \end{enumerate}
+        The objective function so that $\varphi(z) + \phi(z)$ would be equivalent to the original formulation of the problem. 
+        Function $\phi(z)$ models the constriants and $\varphi(z)$ models the sum of smooth and non-smooth parts of the original objective. 
+        
+
 
 
     \subsection{Another Method that is not Cursed by the Dimension}
